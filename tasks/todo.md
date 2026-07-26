@@ -118,6 +118,7 @@
 - GitHub Actions: [CI run #2](https://github.com/SachPlayZ/Vulna/actions/runs/30214867918) passed `pnpm run test:ci` from a clean checkout.
 - Hosted network label: production alias `https://vulna-midnight.vercel.app` returned HTTP 200 with `Preview Midnight` rendered.
 - Visual refresh: `pnpm run test:web` passed 3 Chromium tests, including theme preference persistence; `pnpm run test:ci` passed 21 privacy/protocol tests; production build and `git diff --check` passed. Desktop light and mobile dark views were inspected locally after motion settled.
+- Visual refresh deployment: Vercel production deployment `dpl_3SjXixEjyf6MDrh9qeaZmjGXimNX` is ready; the canonical live demo renders the updated hero, generated assets, and Preview Midnight label.
 
 ### Risks
 

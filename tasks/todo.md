@@ -54,6 +54,11 @@
   - [x] Add generated dossier and envelope artwork to the landing.
   - [x] Introduce system-aware theme tokens and a manual theme toggle.
   - [x] Restyle bounty, researcher, and reviewer surfaces without changing privacy behavior.
+- [x] Wallet connection — add a browser DApp Connector session for Preview wallet authorization.
+  - [x] Install the pinned DApp Connector API and enumerate injected wallets safely.
+  - [x] Add client-only connect, disconnect, network, and account-change handling.
+  - [x] Expose the connected public address and wallet state in navigation and researcher flow.
+  - [x] Keep report submission fail-closed until an open bounty and browser ZK bundle are available.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -73,6 +78,7 @@
 - [x] Phase 8: Chromium browser tests for CSP/security headers, public HTML, client encryption, requests, browser storage, and the plaintext sentinel.
 - [x] Phase 9 (Preview evidence): full proof-backed harmless lifecycle and public indexer confirmation.
 - [x] Visual refresh: run build, web tests, light/dark responsive inspection, and privacy-output review.
+- [x] Wallet connection: run connector unit/browser coverage, build, privacy regression, and public-state review.
 
 ## Review
 
@@ -98,6 +104,7 @@
 - Added GitHub Actions verification and deployed the public fictional-demo UI with Vercel.
 - Corrected the hosted navigation from Local Midnight to Preview Midnight and redeployed it.
 - Added an editorial landing with generated dossier imagery, GSAP reveal motion, a system-aware light/dark theme, and unified public workspace styling without moving report data across the browser privacy boundary.
+- Added a browser-only DApp Connector session for Preview Midnight. It enumerates injected wallets without hardcoded provider keys, exposes only the unshielded address, and clears state on disconnect or network changes.
 
 ### Verified
 
@@ -119,6 +126,7 @@
 - Hosted network label: production alias `https://vulna-midnight.vercel.app` returned HTTP 200 with `Preview Midnight` rendered.
 - Visual refresh: `pnpm run test:web` passed 3 Chromium tests, including theme preference persistence; `pnpm run test:ci` passed 21 privacy/protocol tests; production build and `git diff --check` passed. Desktop light and mobile dark views were inspected locally after motion settled.
 - Visual refresh deployment: Vercel production deployment `dpl_3SjXixEjyf6MDrh9qeaZmjGXimNX` is ready; the canonical live demo renders the updated hero, generated assets, and Preview Midnight label.
+- Wallet connection: `pnpm run test:web` passed 5 Chromium checks, including Preview connection and wrong-network rejection; `pnpm run test:ci` passed 23 protocol/privacy checks; production build and diff checks passed. Desktop researcher wallet state was inspected locally.
 
 ### Risks
 
@@ -130,6 +138,7 @@
 - The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
 - GitHub Actions runs the 21-test generated-binding-independent suite; the full Compact simulator suite remains a local/toolchain verification command.
 - Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
+- A connected wallet cannot submit a new disclosure yet: the confirmed Preview demo bounty is already `PAID`, and browser-served Vulna ZK assets plus an open bounty must exist before a proof-backed call can be safely enabled. The UI intentionally sends no fabricated transaction.
 
 ### Follow-ups
 

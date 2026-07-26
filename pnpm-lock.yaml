@@ -14,6 +14,9 @@ importers:
       '@midnight-ntwrk/compact-runtime':
         specifier: 0.16.0
         version: 0.16.0
+      '@midnight-ntwrk/dapp-connector-api':
+        specifier: 4.0.1
+        version: 4.0.1
       '@midnight-ntwrk/midnight-js-contracts':
         specifier: 4.1.1
         version: 4.1.1
@@ -466,6 +469,9 @@ packages:
 
   '@midnight-ntwrk/compact-runtime@0.16.0':
     resolution: {integrity: sha512-UR8+MI5zol+gkne17ZZru8xmZNf11xMgQJkiLT9KWsF+QD8Wuz1WONaqQLL0RAZ2aN2XlRsBFd0ViKDVh8prFw==}
+
+  '@midnight-ntwrk/dapp-connector-api@4.0.1':
+    resolution: {integrity: sha512-IstRo8xfmlJlGgUcAJeRzPUmGCp0/xZR3/bfTOk33MHrzbGmB79r/zYziGavcclo1pkkoBHAodX4vz3xgFxczw==}
 
   '@midnight-ntwrk/ledger-v8@8.1.0':
     resolution: {integrity: sha512-rwOVP5kBwACpYmmY6+oLeaiM3e5gHscRMjbZUOntOC5QdtqLdpeep6eQW1OngI+sxjjdVoGg2eE16sLf+DAHmQ==}
@@ -1789,6 +1795,8 @@ snapshots:
       '@midnight-ntwrk/onchain-runtime-v3': 3.0.0
       '@types/object-inspect': 1.13.0
       object-inspect: 1.13.4
+
+  '@midnight-ntwrk/dapp-connector-api@4.0.1': {}
 
   '@midnight-ntwrk/ledger-v8@8.1.0': {}
 

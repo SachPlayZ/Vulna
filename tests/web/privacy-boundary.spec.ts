@@ -67,3 +67,49 @@ test('theme toggle persists a non-sensitive display preference', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
 });
+
+test('wallet connector authorizes only a Preview wallet and exposes a public address', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.midnight = {
+      'example-wallet-id': {
+        name: 'Example Wallet',
+        rdns: 'example.wallet',
+        icon: '',
+        apiVersion: '4.0.1',
+        connect: async () => ({
+          hintUsage: async () => undefined,
+          getConfiguration: async () => ({ networkId: 'preview', indexerUri: 'https://example.invalid/graphql', indexerWsUri: 'wss://example.invalid/graphql', substrateNodeUri: 'wss://example.invalid' }),
+          getConnectionStatus: async () => ({ status: 'connected', networkId: 'preview' }),
+          getUnshieldedAddress: async () => ({ unshieldedAddress: 'mn_addr_preview1abcdefghijklmnopqrstuvwxyz' }),
+        }),
+      },
+    };
+  });
+  await page.goto('/researcher');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+  await expect(page.getByText('Example Wallet mn_addr_pr…uvwxyz')).toBeVisible();
+});
+
+test('wallet connector fails closed when a wallet reports the wrong network', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.midnight = {
+      'wrong-network-wallet': {
+        name: 'Wrong Network Wallet',
+        rdns: 'example.wallet',
+        icon: '',
+        apiVersion: '4.0.1',
+        connect: async () => ({
+          hintUsage: async () => undefined,
+          getConfiguration: async () => ({ networkId: 'preprod', indexerUri: 'https://example.invalid/graphql', indexerWsUri: 'wss://example.invalid/graphql', substrateNodeUri: 'wss://example.invalid' }),
+          getConnectionStatus: async () => ({ status: 'connected', networkId: 'preprod' }),
+          getUnshieldedAddress: async () => ({ unshieldedAddress: 'mn_addr_preprod1abcdefghijklmnopqrstuvwxyz' }),
+        }),
+      },
+    };
+  });
+  await page.goto('/researcher');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await expect(page.locator('.wallet-error')).toContainText('Unlock your wallet, select Preview Midnight');
+  await expect(page.getByRole('button', { name: 'Disconnect' })).not.toBeVisible();
+});

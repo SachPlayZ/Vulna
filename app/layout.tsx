@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Outfit } from 'next/font/google';
 
+import { WalletProvider } from '../components/wallet/wallet-provider';
+
 import './globals.css';
 
 const outfit = Outfit({
@@ -18,7 +20,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={outfit.variable} suppressHydrationWarning>
-      <body><a className="skip-link" href="#main-content">Skip to content</a>{children}</body>
+      <body><a className="skip-link" href="#main-content">Skip to content</a><WalletProvider>{children}</WalletProvider></body>
     </html>
   );
 }

@@ -53,3 +53,17 @@ test('researcher encryption keeps the sentinel out of requests and browser persi
   expect(persisted.local).not.toContain(sentinel);
   expect(new TextDecoder().decode(new Uint8Array(persisted.blobs[0]))).not.toContain(sentinel);
 });
+
+test('theme toggle persists a non-sensitive display preference', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+
+  const themeToggle = page.getByRole('button', { name: 'Switch to light mode' });
+  await expect(themeToggle).toBeVisible();
+  await themeToggle.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+});

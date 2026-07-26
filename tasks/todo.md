@@ -49,6 +49,11 @@
   - [x] Deploy the web UI: `https://midnight-demo-app.vercel.app`.
   - [x] Run full test suite for submission screenshot (25 passing tests).
   - [x] Correct the hosted navigation network label to Preview Midnight.
+- [ ] Visual refresh — animate the landing, add generated editorial assets, polish public routes, and support light/dark themes.
+  - [x] Add reduced-motion-safe GSAP entrance and scroll reveals.
+  - [x] Add generated dossier and envelope artwork to the landing.
+  - [x] Introduce system-aware theme tokens and a manual theme toggle.
+  - [x] Restyle bounty, researcher, and reviewer surfaces without changing privacy behavior.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -67,6 +72,7 @@
 - [x] Phase 7: App Router production build, public route/sentinel HTML inspection, client-only encrypted draft preparation, and protocol/contract/indexer regression checks.
 - [x] Phase 8: Chromium browser tests for CSP/security headers, public HTML, client encryption, requests, browser storage, and the plaintext sentinel.
 - [x] Phase 9 (Preview evidence): full proof-backed harmless lifecycle and public indexer confirmation.
+- [x] Visual refresh: run build, web tests, light/dark responsive inspection, and privacy-output review.
 
 ## Review
 
@@ -91,6 +97,7 @@
 - Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, explicit observer-visibility table, and MVP limitations.
 - Added GitHub Actions verification and deployed the public fictional-demo UI with Vercel.
 - Corrected the hosted navigation from Local Midnight to Preview Midnight and redeployed it.
+- Added an editorial landing with generated dossier imagery, GSAP reveal motion, a system-aware light/dark theme, and unified public workspace styling without moving report data across the browser privacy boundary.
 
 ### Verified
 
@@ -110,6 +117,7 @@
 - Submission readiness: Vercel production URL returned HTTP 200 with CSP; local `pnpm test` passed 23 protocol/privacy and 2 Compact simulator tests.
 - GitHub Actions: [CI run #2](https://github.com/SachPlayZ/Vulna/actions/runs/30214867918) passed `pnpm run test:ci` from a clean checkout.
 - Hosted network label: production alias `https://vulna-midnight.vercel.app` returned HTTP 200 with `Preview Midnight` rendered.
+- Visual refresh: `pnpm run test:web` passed 3 Chromium tests, including theme preference persistence; `pnpm run test:ci` passed 21 privacy/protocol tests; production build and `git diff --check` passed. Desktop light and mobile dark views were inspected locally after motion settled.
 
 ### Risks
 

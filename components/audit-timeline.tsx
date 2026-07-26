@@ -1,6 +1,6 @@
 const events = [
   ['01', 'Bounty opened', 'Public scope and reward policy indexed'],
-  ['02', 'Report committed', 'Commitment only — report never enters public state'],
+  ['02', 'Report committed', 'Commitment only. Report never enters public state.'],
   ['03', 'Selective review', 'Authorized reviewer decrypts locally'],
   ['04', 'Patch recorded', 'Project records a public patch commitment'],
   ['05', 'Settlement acknowledged', 'Receipt-linked, non-atomic settlement'],

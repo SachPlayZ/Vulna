@@ -53,10 +53,13 @@ export function createVulnaProviders(input: {
   walletContext: WalletContext;
   network: NetworkConfig;
   privateStatePassword: string | undefined;
+  /** Isolates local role contexts sharing a development wallet. */
+  privateStateScope?: 'owner' | 'researcher' | 'reviewer';
 }): VulnaProviders {
   const walletProvider = createWalletProvider(input.walletContext);
   const zkConfigProvider = new NodeZkConfigProvider<VulnaCircuits>(VULNA_ZK_CONFIG_PATH);
-  const accountId = input.walletContext.unshieldedKeystore.getBech32Address().toString();
+  const walletAccountId = input.walletContext.unshieldedKeystore.getBech32Address().toString();
+  const accountId = input.privateStateScope ? `${walletAccountId}:${input.privateStateScope}` : walletAccountId;
 
   return {
     privateStateProvider: levelPrivateStateProvider<typeof VULNA_PRIVATE_STATE_ID, VulnaPrivateState>({

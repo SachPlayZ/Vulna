@@ -2,8 +2,8 @@
 
 Privacy-preserving vulnerability disclosure and bug-bounty protocol on Midnight Network.
 
-Current implementation: encrypted client package, account-scoped witnesses,
-proof-backed local submission, and indexed commitment confirmation. See
+Current implementation: encrypted client package, role-scoped witnesses,
+proof-backed reviewer acceptance/owner patch, and indexed lifecycle confirmation. See
 [PHASE_PLAN.md](PHASE_PLAN.md).
 
 ## Quick start
@@ -21,9 +21,9 @@ npm run test:e2e
 
 1. `docker compose up -d --wait` — starts a local Midnight devnet (node, indexer, proof-server) and blocks until all three pass their healthchecks.
 2. `npm run compile` — compiles `contracts/hello-world.compact` to `contracts/managed/hello-world/`.
-3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, submits a proof-backed commitment, confirms it in the indexer, and writes `.midnight-state.json`.
+3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, verifies it in a separate reviewer process, proves reviewer acceptance and owner patch, confirms it in the indexer, and writes `.midnight-state.json`.
 
-`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a committed submission is visible. It never reads private state or report plaintext.
+`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a patched submission is visible. It never reads private state or report plaintext.
 
 ## Local devnet
 

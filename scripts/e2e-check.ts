@@ -29,7 +29,7 @@ async function main() {
   if (!onChainState) fail(`Indexer returned no contract state for ${deployment.address}.`);
   const publicLedger = ledger(onChainState.data);
   if (publicLedger.bountyCount < 1n || publicLedger.submissionCount < 1n) fail('Indexed Vulna fixture is incomplete.');
-  if (publicLedger.submissions.lookup(1n).status !== SubmissionStatus.COMMITTED) fail('Indexed submission is not committed.');
+  if (publicLedger.submissions.lookup(1n).status !== SubmissionStatus.PATCHED) fail('Indexed submission is not patched.');
 
   console.log('✅ Vulna indexer confirmation passed');
   console.log(`   contractAddress: ${deployment.address}`);

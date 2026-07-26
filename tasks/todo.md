@@ -3,7 +3,7 @@
 ## Plan
 
 - [x] Phase 0 — Scaffold Vulna; verify Compact, Docker, proof server, deploy, circuit call, and indexer read.
-- [ ] Phase 1 — Freeze schemas, commitments, privacy/threat model, access rules, payout ADR.
+- [x] Phase 1 — Freeze schemas, commitments, privacy/threat model, access rules, payout ADR.
 - [ ] Phase 2 — Implement Compact bounty/submission state machine with simulator tests.
 - [ ] Phase 3 — Implement client crypto, encrypted storage, private-state recovery, leak tests.
 - [ ] Phase 4 — Integrate wallet/providers, witnesses, real proof-backed submission, indexer confirmation.
@@ -20,6 +20,7 @@
 - [x] Phase 0: `pnpm run setup`.
 - [x] Phase 0: `pnpm run test:e2e`.
 - [x] Phase 0: real `storeMessage` transaction + indexed state read.
+- [x] Phase 1: protocol unit tests, strict typecheck, Compact compile, privacy-output review.
 - [ ] Per phase: narrow tests, affected checks, privacy-output review, diff review.
 
 ## Review
@@ -30,19 +31,22 @@
 - Initialized local Git repository.
 - Renamed planning/protocol docs to Vulna.
 - Added compatibility baseline and ignored generated local private-state database.
+- Added strict schemas, canonicalization vectors, state-transition guards, privacy/threat/architecture docs, and protocol ADRs.
 
 ### Verified
 
 - Compact 0.5.1/compiler 0.31.1.
 - Docker node, indexer, and proof server healthy.
 - Local contract deployed, transaction submitted, and ledger state indexed.
+- `pnpm test`, `pnpm exec tsc --noEmit`, and `pnpm run compile` pass for Phase 1.
 
 ### Risks
 
 - No Git remote configured; Phase 0 can commit locally but cannot push yet.
 - `pnpm install` reports ignored optional dependency build scripts; re-check before browser/build work.
 - Atomic shielded payout is unproven; Phase 6 must spike it before product claims.
+- Compact/client commitment parity is explicitly deferred to Phase 2 generated-contract tests; no custom commitment primitive exists in application code.
 
 ### Follow-ups
 
-- Start Phase 1.
+- Start Phase 2.

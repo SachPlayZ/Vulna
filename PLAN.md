@@ -390,6 +390,7 @@ All on-chain structures below are conceptual. Exact Compact types must be select
 ```ts
 type Bounty = {
   id: bigint;
+  binding: Bytes32;
   ownerAuthKey: Bytes32;
   reviewerAuthKey: Bytes32;
   reviewerEncryptionKeyHash: Bytes32;
@@ -425,7 +426,7 @@ type Submission = {
   bountyId: bigint;
   reportCommitment: Bytes32;
   artifactHash: Bytes32;
-  accessEnvelopeHash: Bytes32;
+  accessEnvelopeHash?: Bytes32;
   researcherOwnershipCommitment: Bytes32;
   researcherNullifier: Bytes32;
   severityCommitment: Bytes32;
@@ -546,9 +547,9 @@ type PrivateReviewPackageV1 = {
   schema: "vulna.review-package.v1";
   report: CanonicalReportV1;
   reportDigest: string;
-  commitmentSalt: string;
+  reportCommitmentOpening: string;
   severityBand: "low" | "medium" | "high" | "critical";
-  severitySalt: string;
+  severityCommitmentOpening: string;
 };
 ```
 
@@ -560,47 +561,36 @@ The exact serializer must have test vectors committed to the repository.
 
 ## 10. Commitment scheme
 
-Use domain-separated commitments. Exact hashing must use a primitive that can be reproduced identically by Compact and TypeScript through the generated runtime or an officially documented helper.
+Use domain-separated commitments. The report digest is SHA-256 over canonical report bytes. Every on-chain commitment/hash uses the installed Compact `persistentCommit`/`persistentHash` primitive and its matching generated runtime helper; do not substitute a JavaScript hash for contract commitments.
 
 Conceptually:
 
 ```text
-reportDigest = H(
-  "vulna:report-digest:v1" || canonicalReportBytes
+reportDigest = SHA-256(canonicalReportBytes)
+
+reportCommitment = persistentCommit(
+  ["vulna:report-commitment:v1", bountyBinding, reportDigest],
+  reportCommitmentOpening
 )
 
-reportCommitment = H(
-  "vulna:report-commitment:v1" ||
-  bountyId ||
-  reportDigest ||
-  commitmentSalt
+severityCommitment = persistentCommit(
+  ["vulna:severity:v1", bountyBinding, severityBand],
+  severityCommitmentOpening
 )
 
-severityCommitment = H(
-  "vulna:severity:v1" ||
-  bountyId ||
-  severityBand ||
-  severitySalt
+researcherOwnershipCommitment = persistentHash(
+  ["vulna:researcher-owner:v1", appSecret, bountyBinding, reportCommitment]
 )
 
-researcherOwnershipCommitment = H(
-  "vulna:researcher-owner:v1" ||
-  appSecret ||
-  bountyId ||
-  reportCommitment
-)
-
-researcherNullifier = H(
-  "vulna:submission-nullifier:v1" ||
-  appSecret ||
-  bountyId ||
-  reportDigest
+researcherNullifier = persistentHash(
+  ["vulna:submission-nullifier:v1", appSecret, bountyBinding, reportDigest]
 )
 ```
 
 Properties:
 
 - The salt must be random and at least 256 bits where the selected primitive permits it.
+- `bountyBinding` is a public Bytes32 value derived and stored by the contract at bounty creation; it avoids an ad-hoc client encoding for numeric bounty IDs.
 - The report digest must not be posted directly until the protocol intentionally reveals it.
 - The researcher ownership commitment lets the same private credential authorize later supplement, claim, withdrawal, and reveal actions without publishing the researcher's identity.
 - The nullifier prevents reuse of the same app secret and report digest for the same bounty, but does not provide global semantic duplicate detection.
@@ -742,7 +732,6 @@ Public outputs/arguments:
 - `bountyId`
 - `reportCommitment`
 - `artifactHash`
-- `accessEnvelopeHash`
 - `severityCommitment`
 - `researcherOwnershipCommitment`
 - `researcherNullifier`
@@ -764,7 +753,26 @@ Rules:
 - Recompute and verify researcher ownership commitment.
 - Recompute and verify nullifier.
 - Record submission and consume nullifier.
+- Set status to `Committed`; no reviewer-envelope reference is stored yet.
 - Do not disclose report digest, salts, severity value, or researcher secret.
+
+#### `grantReviewerAccess`
+
+Inputs:
+
+- `submissionId`
+- `accessEnvelopeHash`
+
+Private witness inputs:
+
+- researcher app secret
+
+Rules:
+
+- Researcher proves ownership against `researcherOwnershipCommitment`.
+- Submission is `Committed` and belongs to an open bounty.
+- Stores the envelope hash and moves the submission to `AccessGranted`.
+- Does not publish or return the report digest, content key, or envelope bytes.
 
 #### `acknowledgeAccess`
 
@@ -994,8 +1002,10 @@ The policy is immutable after the first submission.
 12. Verify uploaded bytes match the local artifact hash.
 13. Store private opening and ownership values locally before transaction submission.
 14. Call `submitDisclosure`.
-15. Confirm the indexed submission state.
-16. Show a recovery/export prompt for local private state.
+15. Confirm the indexed `Committed` submission state.
+16. Call `grantReviewerAccess` with the encrypted envelope hash.
+17. Confirm the indexed `AccessGranted` submission state.
+18. Show a recovery/export prompt for local private state.
 
 Do not upload before encryption. Do not submit the chain transaction before local private state is durably saved.
 
@@ -1136,6 +1146,7 @@ interface VulnaContractClient {
   createBounty(input: CreateBountyInput): Promise<TxResult>;
   fundBounty(input: FundBountyInput): Promise<TxResult>;
   submitDisclosure(input: SubmitDisclosureInput): Promise<TxResult>;
+  grantReviewerAccess(input: GrantReviewerAccessInput): Promise<TxResult>;
   acknowledgeAccess(submissionId: bigint): Promise<TxResult>;
   requestMoreInfo(input: RequestMoreInfoInput): Promise<TxResult>;
   addEncryptedSupplement(input: AddSupplementInput): Promise<TxResult>;

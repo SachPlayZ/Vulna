@@ -10,7 +10,7 @@ Secondary positioning: privacy-preserving security tooling with on-chain settlem
 
 ## Current baseline
 
-The repository currently contains planning documents only. There is no generated Midnight scaffold, `package.json`, lockfile, contract, application, or test suite.
+Phase 0 is complete: Vulna now has a generated Midnight scaffold, pinned `pnpm-lock.yaml`, local Docker devnet, compiled Compact contract, generated bindings, and a verified local deploy/call/indexer read. See `docs/COMPATIBILITY.md`.
 
 As checked on 2026-07-26, the official compatibility matrix lists:
 

@@ -116,8 +116,8 @@ export async function runPhase6SettlementFlow(): Promise<void> {
     const researcherContract = await findDeployedContract(researcherProviders, { compiledContract: vulnaCompiledContract, contractAddress: address, privateStateId: VULNA_PRIVATE_STATE_ID, initialPrivateState: researcherState });
     const reviewerContract = await findDeployedContract(reviewerProviders, { compiledContract: vulnaCompiledContract, contractAddress: address, privateStateId: VULNA_PRIVATE_STATE_ID, initialPrivateState: reviewerState });
     const reviewerRole = roleKey('vulna:reviewer:v1', bytesToHex(reviewerState.actorSecret));
-    await deployed.callTx.createBounty(bytes32FromHex(reviewerRole), bytes32FromHex(binding), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:metadata:v1')))), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:scope:v1')))), 1n);
-    await deployed.callTx.fundBounty(1n);
+    await deployed.callTx.createBounty(bytes32FromHex(reviewerRole), bytes32FromHex(bytesToHex(reviewer.publicKey)), 1n, bytes32FromHex(binding), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:metadata:v1')))), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:scope:v1')))), 1n);
+    await deployed.callTx.openBounty(1n);
     await researcherContract.callTx.submitDisclosure(1n, bytes32FromHex(reportCommitmentValue), bytes32FromHex(encrypted.artifactHash), bytes32FromHex(severityCommitmentValue), bytes32FromHex(ownership), bytes32FromHex(nullifier), bytes32FromHex(recipientCommitment));
     await mustReject(() => deployed.callTx.reviewerTransition(1n, ReviewerAction.ACKNOWLEDGE_ACCESS, 0n), 'Owner passed reviewer authorization.');
     await mustReject(() => reviewerContract.callTx.reviewerTransition(1n, ReviewerAction.ACKNOWLEDGE_ACCESS, 0n), 'Reviewer acknowledged before access grant.');

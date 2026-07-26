@@ -143,6 +143,7 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   const sim = createSimulator();
   const binding = bytes(20);
   const reviewerKey = roleKey('vulna:reviewer:v1', reviewerSecret);
+  const reviewerEncryptionKey = bytes(21);
   const metadataHash = bytes(22);
   const scopeHash = bytes(23);
   const artifactHash = bytes(24);
@@ -150,19 +151,21 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   const submission = submissionValues(binding);
 
   expectFailure(
-    () => sim.call('createBounty', reviewerKey, binding, metadataHash, scopeHash, 0n),
+    () => sim.call('createBounty', reviewerKey, reviewerEncryptionKey, 1n, binding, metadataHash, scopeHash, 0n),
     'reward must be positive',
   );
-  const bountyId = sim.call('createBounty', reviewerKey, binding, metadataHash, scopeHash, 100n);
+  expectFailure(() => sim.call('createBounty', reviewerKey, ZERO, 1n, binding, metadataHash, scopeHash, 100n), 'reviewer encryption key missing');
+  expectFailure(() => sim.call('createBounty', reviewerKey, reviewerEncryptionKey, 0n, binding, metadataHash, scopeHash, 100n), 'reviewer key version missing');
+  const bountyId = sim.call('createBounty', reviewerKey, reviewerEncryptionKey, 1n, binding, metadataHash, scopeHash, 100n);
   assert.equal(bountyId, 1n);
   assert.equal(sim.state().bounties.lookup(bountyId).status, BountyStatus.DRAFT);
 
   sim.setActor(attackerSecret);
-  expectFailure(() => sim.call('fundBounty', bountyId), 'owner only');
+  expectFailure(() => sim.call('openBounty', bountyId), 'owner only');
   sim.setActor(ownerSecret);
-  sim.call('fundBounty', bountyId);
+  sim.call('openBounty', bountyId);
   assert.equal(sim.state().bounties.lookup(bountyId).status, BountyStatus.OPEN);
-  expectFailure(() => sim.call('fundBounty', bountyId), 'bounty not draft');
+  expectFailure(() => sim.call('openBounty', bountyId), 'bounty not draft');
 
   expectFailure(
     () => sim.call('submitDisclosure', bountyId, bytes(200), artifactHash, submission.severityCommitment, submission.ownershipCommitment, submission.nullifier, bytes(201)),
@@ -268,15 +271,15 @@ test('generated Compact prevents rejected and withdrawn submission revival and u
   const sim = createSimulator();
   const reviewerKey = roleKey('vulna:reviewer:v1', reviewerSecret);
 
-  const cancelableId = sim.call('createBounty', reviewerKey, bytes(30), bytes(31), bytes(32), 1n);
-  sim.call('fundBounty', cancelableId);
+  const cancelableId = sim.call('createBounty', reviewerKey, bytes(29), 1n, bytes(30), bytes(31), bytes(32), 1n);
+  sim.call('openBounty', cancelableId);
   sim.call('ownerTransition', cancelableId, 0n, OwnerAction.CANCEL_BOUNTY, ZERO);
   assert.equal(sim.state().bounties.lookup(cancelableId).status, BountyStatus.CANCELLED);
   expectFailure(() => sim.call('submitDisclosure', cancelableId, bytes(33), bytes(34), bytes(35), bytes(36), bytes(37), bytes(38)), 'bounty not open');
 
   const rejectedBinding = bytes(40);
-  const rejectedId = sim.call('createBounty', reviewerKey, rejectedBinding, bytes(41), bytes(42), 2n);
-  sim.call('fundBounty', rejectedId);
+  const rejectedId = sim.call('createBounty', reviewerKey, bytes(39), 1n, rejectedBinding, bytes(41), bytes(42), 2n);
+  sim.call('openBounty', rejectedId);
   const rejected = submissionValues(rejectedBinding, { digest: bytes(43), opening: bytes(44), severity: bytes(45), severityOpening: bytes(46) });
   sim.setReport(rejected.digest, rejected.opening);
   sim.setSeverity(bytes(45), bytes(46));
@@ -293,8 +296,8 @@ test('generated Compact prevents rejected and withdrawn submission revival and u
 
   const withdrawnBinding = bytes(50);
   sim.setActor(ownerSecret);
-  const withdrawnId = sim.call('createBounty', reviewerKey, withdrawnBinding, bytes(51), bytes(52), 3n);
-  sim.call('fundBounty', withdrawnId);
+  const withdrawnId = sim.call('createBounty', reviewerKey, bytes(49), 1n, withdrawnBinding, bytes(51), bytes(52), 3n);
+  sim.call('openBounty', withdrawnId);
   const withdrawn = submissionValues(withdrawnBinding, { digest: bytes(53), opening: bytes(54), severity: bytes(55), severityOpening: bytes(56) });
   sim.setReport(withdrawn.digest, withdrawn.opening);
   sim.setSeverity(bytes(55), bytes(56));

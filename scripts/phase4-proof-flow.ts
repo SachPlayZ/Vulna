@@ -132,8 +132,8 @@ async function main(): Promise<void> {
     const reviewerRole = roleKey('vulna:reviewer:v1', bytesToHex(privateState.actorSecret));
     const safeMetadataHash = bytesToHex(await sha256(new TextEncoder().encode('vulna:phase4:metadata:v1')));
     const safeScopeHash = bytesToHex(await sha256(new TextEncoder().encode('vulna:phase4:scope:v1')));
-    await deployed.callTx.createBounty(bytes32FromHex(reviewerRole), bytes32FromHex(bountyBinding), bytes32FromHex(safeMetadataHash), bytes32FromHex(safeScopeHash), 1n);
-    await deployed.callTx.fundBounty(1n);
+    await deployed.callTx.createBounty(bytes32FromHex(reviewerRole), bytes32FromHex(bytesToHex(reviewer.publicKey)), 1n, bytes32FromHex(bountyBinding), bytes32FromHex(safeMetadataHash), bytes32FromHex(safeScopeHash), 1n);
+    await deployed.callTx.openBounty(1n);
     await deployed.callTx.submitDisclosure(
       1n,
       bytes32FromHex(reportCommitmentValue),

@@ -12,7 +12,7 @@ This does not hide transaction existence, circuit choice, timing, network metada
 | --- | --- | --- | --- |
 | Bounty title, scope policy, reward, reviewer key ID | Public metadata + ledger | Public | Programs must be discoverable/auditable. |
 | Scope hash, bounty binding | Ledger | Public | Binds public policy/protocol context. |
-| Report body, reproduction, attachments, URLs, secrets | Browser then encrypted blob | Private | Core protected material. |
+| Report body, reproduction, attachments, URLs, secrets | Browser then XChaCha20-Poly1305 encrypted envelope in Blob | Private | Core protected material. |
 | Report digest, report/severity openings, researcher app secret | Account-scoped private state | Private until voluntary reveal | Needed for proof/verification; dictionary and identity-link risk. |
 | Report commitment, ownership commitment, nullifier | Ledger | Public | Proves fixed submission/ownership and prevents reuse. Nullifier is derived from high-entropy secret. |
 | Ciphertext artifact hash, envelope hash | Ledger | Public | Integrity reference only; still correlatable metadata. |
@@ -35,7 +35,7 @@ Every exported circuit argument, `disclose`, ledger key, ledger value, circuit r
 
 Forbidden for plaintext: `localStorage`, `sessionStorage`, cookies, URL query/fragment, server actions, service-worker cache, global state persistence, analytics, logs, and error messages.
 
-The blob store cannot transform, compress, inspect, or reserialize ciphertext unless byte identity and hashes remain explicitly verified.
+The relay is a public Vercel Blob store containing immutable, content-addressed `application/octet-stream` encrypted envelopes only. Anyone with an envelope URL can obtain the ciphertext and learn its byte length, upload timing, bounty ID in the envelope's safe metadata, and hashes; they cannot decrypt it without the reviewer's private Curve25519 key. The browser verifies the raw envelope hash, schema, and ciphertext artifact hash before chain submission or reviewer decryption. The blob store cannot transform, compress, inspect, or reserialize ciphertext unless byte identity and hashes remain explicitly verified.
 
 The product UI sends restrictive CSP, framing, referrer, MIME-sniffing, and
 permissions headers on every route. Private report routes have no third-party

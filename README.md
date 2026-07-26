@@ -81,6 +81,8 @@ researchers.
 | Public commitments, artifact/envelope hashes, accepted severity, patch commitment, and receipt hash | Report digest, commitment openings, severity opening/value, or researcher ownership secret before an intentional reveal |
 | The bounty's public reward amount and the existence of a `PAID` receipt acknowledgment | The payout recipient from Vulna's ledger; it is stored there only as a salted commitment |
 
+Encrypted report envelopes use a public, immutable Vercel Blob relay. An observer may retrieve ciphertext by URL and learn its byte length, timing, and safe envelope metadata; they cannot decrypt or alter a report without the reviewer's private key and failing the browser's hash checks.
+
 The separate NIGHT transfer used for settlement is transparent. A network
 observer may see and correlate that transfer outside Vulna's contract, so the
 receipt hash must not be interpreted as shielded payment or payment privacy.

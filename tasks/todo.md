@@ -59,6 +59,14 @@
   - [x] Add client-only connect, disconnect, network, and account-change handling.
   - [x] Expose the connected public address and wallet state in navigation and researcher flow.
   - [x] Keep report submission fail-closed until an open bounty and browser ZK bundle are available.
+- [ ] Browser transaction flow — let owner wallets open a bounty and researcher wallets submit proof-backed disclosures.
+  - [ ] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
+  - [ ] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
+  - [x] Add an untrusted Vercel Blob relay for canonical encrypted report envelopes; browser encrypts before upload and reviewer verifies hashes before decrypting.
+  - [ ] Serve generated ZK assets and construct browser providers from the connected wallet configuration.
+  - [ ] Persist account-scoped witness state only as encrypted IndexedDB data derived from wallet authorization.
+  - [ ] Implement owner create/open bounty and researcher submit flows with indexer confirmation.
+  - [ ] Add contract, crypto, browser, and plaintext-sentinel tests for the V2 flow.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -79,6 +87,7 @@
 - [x] Phase 9 (Preview evidence): full proof-backed harmless lifecycle and public indexer confirmation.
 - [x] Visual refresh: run build, web tests, light/dark responsive inspection, and privacy-output review.
 - [x] Wallet connection: run connector unit/browser coverage, build, privacy regression, and public-state review.
+- [ ] Browser transaction flow: run V2 contract simulator, ciphertext-relay tests, browser wallet mocks, indexer confirmation, and privacy-output review.
 
 ## Review
 
@@ -105,6 +114,8 @@
 - Corrected the hosted navigation from Local Midnight to Preview Midnight and redeployed it.
 - Added an editorial landing with generated dossier imagery, GSAP reveal motion, a system-aware light/dark theme, and unified public workspace styling without moving report data across the browser privacy boundary.
 - Added a browser-only DApp Connector session for Preview Midnight. It enumerates injected wallets without hardcoded provider keys, exposes only the unshielded address, and clears state on disconnect or network changes.
+- Added a public Vercel Blob relay for immutable, content-addressed encrypted report envelopes. The browser-side upload helper verifies returned bytes before use; the server route only issues path-constrained short-lived upload tokens and never accepts report bytes.
+- Updated the pending V2 Compact ABI so each bounty binds an immutable reviewer Curve25519 public key and key version; renamed `fundBounty` to `openBounty` to avoid a false custody claim.
 
 ### Verified
 
@@ -127,6 +138,7 @@
 - Visual refresh: `pnpm run test:web` passed 3 Chromium tests, including theme preference persistence; `pnpm run test:ci` passed 21 privacy/protocol tests; production build and `git diff --check` passed. Desktop light and mobile dark views were inspected locally after motion settled.
 - Visual refresh deployment: Vercel production deployment `dpl_3SjXixEjyf6MDrh9qeaZmjGXimNX` is ready; the canonical live demo renders the updated hero, generated assets, and Preview Midnight label.
 - Wallet connection: `pnpm run test:web` passed 5 Chromium checks, including Preview connection and wrong-network rejection; `pnpm run test:ci` passed 23 protocol/privacy checks; production build and diff checks passed. Desktop researcher wallet state was inspected locally.
+- Blob relay/V2 ABI: `pnpm run test:protocol` passed 26 tests, `pnpm run typecheck` passed, Compact V2 compiled, and the production upload route returned `405` to an unsupported `HEAD` request with the expected exact Blob CSP origin.
 
 ### Risks
 
@@ -139,6 +151,7 @@
 - GitHub Actions runs the 21-test generated-binding-independent suite; the full Compact simulator suite remains a local/toolchain verification command.
 - Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
 - A connected wallet cannot submit a new disclosure yet: the confirmed Preview demo bounty is already `PAID`, and browser-served Vulna ZK assets plus an open bounty must exist before a proof-backed call can be safely enabled. The UI intentionally sends no fabricated transaction.
+- The public Blob relay is ciphertext-only but not an authenticated anti-abuse service yet; its short-lived tokens are path/content/size constrained. Add wallet-signature verification and rate limiting before high-volume production use.
 
 ### Follow-ups
 

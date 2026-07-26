@@ -35,3 +35,5 @@ Every exported circuit argument, `disclose`, ledger key, ledger value, circuit r
 Forbidden for plaintext: `localStorage`, `sessionStorage`, cookies, URL query/fragment, server actions, service-worker cache, global state persistence, analytics, logs, and error messages.
 
 The blob store cannot transform, compress, inspect, or reserialize ciphertext unless byte identity and hashes remain explicitly verified.
+
+The precise encrypted report, storage, and recovery format is in `docs/CRYPTO_FORMAT.md`. The account encryption key is supplied by the wallet/private-state integration in Phase 4; no missing-state path manufactures a replacement secret or opening.

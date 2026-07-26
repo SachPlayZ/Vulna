@@ -17,7 +17,7 @@
     "proof-server:stop": "docker compose down",
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state",
     "test": "pnpm run test:protocol && pnpm run test:contract",
-    "test:protocol": "tsx --test src/protocol/*.test.ts",
+    "test:protocol": "tsx --test src/protocol/*.test.ts src/crypto/*.test.ts src/storage/*.test.ts",
     "test:contract": "pnpm run compile && node --test scripts/contract-simulator.test.mjs",
     "test:e2e": "tsx scripts/e2e-check.ts"
   },
@@ -33,6 +33,7 @@
     "@midnight-ntwrk/midnight-js-types": "4.1.1",
     "@midnight-ntwrk/midnight-js-utils": "4.1.1",
     "@midnight-ntwrk/wallet-sdk": "1.2.0",
+    "libsodium-wrappers-sumo": "0.8.4",
     "rxjs": "^7.8.2",
     "ws": "^8.21.1",
     "zod": "4.4.3"

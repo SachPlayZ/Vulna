@@ -41,6 +41,9 @@ importers:
       '@midnight-ntwrk/wallet-sdk':
         specifier: 1.2.0
         version: 1.2.0(@midnight-ntwrk/ledger-v8@8.1.0)(ws@8.21.1)
+      libsodium-wrappers-sumo:
+        specifier: 0.8.4
+        version: 0.8.4
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -788,6 +791,12 @@ packages:
   level@10.0.0:
     resolution: {integrity: sha512-aZJvdfRr/f0VBbSRF5C81FHON47ZsC2TkGxbBezXpGGXAUEL/s6+GP73nnhAYRSCIqUNsmJjfeOF4lzRDKbUig==}
     engines: {node: '>=18'}
+
+  libsodium-sumo@0.8.4:
+    resolution: {integrity: sha512-TMtHShQfVVsaxDygyapvUC3o7YsPgXa/hRWeIgzyFz6w5k/1hirGptCxp1U7XwW3rCskaTTYKgV10v86UiGgNw==}
+
+  libsodium-wrappers-sumo@0.8.4:
+    resolution: {integrity: sha512-ql7hcgulKZ3ekfa2DGAogcCKsWU0diA/0nArz1CFzh93WQdb46/Kj18ka/Hifq6uA3Ush34Pc6vU/6HXeRwUkg==}
 
   maybe-combine-errors@1.0.0:
     resolution: {integrity: sha512-eefp6IduNPT6fVdwPp+1NgD0PML1NU5P6j1Mj5nz1nidX8/sWY7119WL8vTAHgqfsY74TzW0w1XPgdYEKkGZ5A==}
@@ -1963,6 +1972,12 @@ snapshots:
       abstract-level: 3.1.1
       browser-level: 3.0.0
       classic-level: 3.0.0
+
+  libsodium-sumo@0.8.4: {}
+
+  libsodium-wrappers-sumo@0.8.4:
+    dependencies:
+      libsodium-sumo: 0.8.4
 
   maybe-combine-errors@1.0.0: {}
 

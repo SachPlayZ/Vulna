@@ -10,6 +10,7 @@ export const VULNA_DOMAIN = {
   reportDigest: 'vulna:report-digest:v1',
   reportCommitment: 'vulna:report-commitment:v1',
   severityCommitment: 'vulna:severity:v1',
+  severityBand: 'vulna:severity-band:v1',
   researcherOwnership: 'vulna:researcher-owner:v1',
   submissionNullifier: 'vulna:submission-nullifier:v1',
   bountyBinding: 'vulna:bounty-binding:v1',

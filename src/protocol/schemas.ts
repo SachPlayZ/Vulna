@@ -63,6 +63,7 @@ export const encryptedReportEnvelopeV1Schema = z.object({
   }).strict(),
   keyEnvelopes: z.array(z.object({
     recipientKeyId: bytes32HexSchema,
+    keyVersion: z.number().int().min(1),
     algorithm: z.literal('curve25519-sealed-box'),
     wrappedContentKey: z.string().regex(/^[0-9a-f]+$/i),
   }).strict()).min(1).max(8),

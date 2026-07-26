@@ -44,7 +44,7 @@
   - [ ] Deploy to Preprod with a funded user-controlled test wallet.
   - [ ] Record public Preprod transaction references after successful deployment.
 - [x] Documentation — rewrite README for the implemented Vulna MVP and verified Preview deployment.
-- [ ] Submission readiness — add GitHub Actions CI, deploy the web UI with Vercel CLI, and produce screenshot-ready test output.
+- [x] Submission readiness — add GitHub Actions CI, deploy the web UI with Vercel CLI, and produce screenshot-ready test output.
   - [x] Add CI workflow for dependency install and clean-checkout privacy regression tests.
   - [x] Deploy the web UI: `https://midnight-demo-app.vercel.app`.
   - [x] Run full test suite for submission screenshot (25 passing tests).
@@ -106,6 +106,7 @@
 - Phase 9 Preview evidence: `PRIVATE_STATE_PASSWORD=<Keychain secret> pnpm run setup -- --network preview` confirmed `PAID`; `pnpm run test:e2e` confirmed public indexer state for `2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`.
 - README refresh: `pnpm run test:e2e`, Preview explorer HTTP 200, and `git diff --check` pass.
 - Submission readiness: Vercel production URL returned HTTP 200 with CSP; local `pnpm test` passed 23 protocol/privacy and 2 Compact simulator tests.
+- GitHub Actions: [CI run #2](https://github.com/SachPlayZ/Vulna/actions/runs/30214867918) passed `pnpm run test:ci` from a clean checkout.
 
 ### Risks
 
@@ -115,6 +116,7 @@
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
 - The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
+- GitHub Actions runs the 21-test generated-binding-independent suite; the full Compact simulator suite remains a local/toolchain verification command.
 - Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
 
 ### Follow-ups

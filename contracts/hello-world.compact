@@ -4,8 +4,8 @@ import CompactStandardLibrary;
 
 // Every value in these exported ledgers is public. Report contents, report
 // digests, openings, secrets, and encryption keys remain witness-only.
-export enum BountyStatus { DRAFT, OPEN, ACCEPTED, PATCHED, CANCELLED }
-export enum SubmissionStatus { COMMITTED, ACCESS_GRANTED, UNDER_REVIEW, NEEDS_MORE_INFO, ACCEPTED, REJECTED, PATCHED, DISCLOSED, WITHDRAWN }
+export enum BountyStatus { DRAFT, OPEN, ACCEPTED, PATCHED, PAID, CANCELLED }
+export enum SubmissionStatus { COMMITTED, ACCESS_GRANTED, UNDER_REVIEW, NEEDS_MORE_INFO, ACCEPTED, REJECTED, PATCHED, PAID, DISCLOSED, WITHDRAWN }
 
 struct Bounty {
     owner: Bytes<32>,
@@ -50,6 +50,9 @@ export ledger bounties: Map<Uint<64>, Bounty>;
 export ledger submissions: Map<Uint<64>, Submission>;
 export ledger supplements: Map<Uint<64>, Supplement>;
 export ledger usedNullifiers: Set<Bytes<32>>;
+// Both are public, salted hashes only. The fallback never publishes a wallet address.
+export ledger payoutRecipientCommitments: Map<Uint<64>, Bytes<32>>;
+export ledger payoutReceiptHashes: Map<Uint<64>, Bytes<32>>;
 export ledger bountyCount: Counter;
 export ledger submissionCount: Counter;
 export ledger supplementCount: Counter;
@@ -127,7 +130,7 @@ export circuit fundBounty(bountyId: Uint<64>): [] {
 
 export circuit submitDisclosure(
     bountyId: Uint<64>, reportCommitment: Bytes<32>, artifactHash: Bytes<32>, severityCommitment: Bytes<32>,
-    ownershipCommitment: Bytes<32>, nullifier: Bytes<32>
+    ownershipCommitment: Bytes<32>, nullifier: Bytes<32>, payoutRecipientCommitment: Bytes<32>
 ): Uint<64> {
     const id = disclose(bountyId);
     assert(bounties.member(id), "bounty missing");
@@ -140,9 +143,11 @@ export circuit submitDisclosure(
     assert(severityCommitment == severityCommitmentFor(bounty.binding, severityValue(), severityOpening()), "severity commitment invalid");
     assert(ownershipCommitment == ownershipCommitmentFor(bounty.binding, secret, reportCommitment), "ownership invalid");
     assert(nullifier == nullifierFor(bounty.binding, secret, digest), "nullifier invalid");
+    assert(payoutRecipientCommitment != pad(32, ""), "payout recipient missing");
     submissionCount.increment(1);
     const submissionId = submissionCount.read() as Uint<64>;
     usedNullifiers.insert(disclose(nullifier));
+    payoutRecipientCommitments.insert(disclose(submissionId), disclose(payoutRecipientCommitment));
     submissions.insert(disclose(submissionId), Submission { bountyId: id, reportCommitment: disclose(reportCommitment),
         artifactHash: disclose(artifactHash), accessEnvelopeHash: pad(32, ""), severityCommitment: disclose(severityCommitment),
         ownershipCommitment: disclose(ownershipCommitment), nullifier: disclose(nullifier), supplementHeadHash: pad(32, ""),
@@ -157,13 +162,13 @@ export circuit submitDisclosure(
 // Deployment stores one verifier key per export circuit. The local Midnight
 // node's block limit cannot hold 13 keys, so role-specific bounded dispatchers
 // keep this one contract deployable without weakening any transition checks.
-export enum ResearcherAction { GRANT_ACCESS, ADD_SUPPLEMENT, WITHDRAW, REVEAL }
+export enum ResearcherAction { GRANT_ACCESS, ADD_SUPPLEMENT, WITHDRAW, ACKNOWLEDGE_SETTLEMENT, REVEAL }
 export enum ReviewerAction { ACKNOWLEDGE_ACCESS, REQUEST_MORE_INFO, ACCEPT, REJECT }
 export enum OwnerAction { MARK_PATCHED, CANCEL_BOUNTY }
 
 export circuit researcherTransition(
     submissionId: Uint<64>, action: ResearcherAction, accessEnvelopeHash: Bytes<32>, previousHeadHash: Bytes<32>,
-    supplementCommitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>
+    supplementCommitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>, settlementReceiptHash: Bytes<32>
 ): Uint<64> {
     const id = disclose(submissionId);
     assert(submissions.member(id), "submission missing");
@@ -197,8 +202,19 @@ export circuit researcherTransition(
         assert(submission.status == SubmissionStatus.COMMITTED || submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
         submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.WITHDRAWN });
         return disclose(0);
+    } else if (operation == ResearcherAction.ACKNOWLEDGE_SETTLEMENT) {
+        // This is the researcher's receipt attestation after a separate wallet transfer.
+        // It is public because it lets observers audit the non-atomic lifecycle outcome.
+        assert(submission.status == SubmissionStatus.PATCHED && bounty.status == BountyStatus.PATCHED, "wrong submission state");
+        assert(payoutRecipientCommitments.member(id), "payout recipient missing");
+        assert(!payoutReceiptHashes.member(id), "payout receipt used");
+        assert(settlementReceiptHash != pad(32, ""), "payout receipt missing");
+        payoutReceiptHashes.insert(id, disclose(settlementReceiptHash));
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.PAID });
+        bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding, metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.PAID, submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+        return disclose(0);
     } else if (operation == ResearcherAction.REVEAL) {
-        assert(submission.status == SubmissionStatus.PATCHED, "wrong submission state");
+        assert(submission.status == SubmissionStatus.PATCHED || submission.status == SubmissionStatus.PAID, "wrong submission state");
         const digest = reportDigest();
         assert(submission.reportCommitment == reportCommitmentFor(bounty.binding, digest, reportOpening()), "report opening invalid");
         submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: disclose(digest), status: SubmissionStatus.DISCLOSED });

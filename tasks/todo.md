@@ -21,11 +21,11 @@
   - [x] Verify ciphertext/envelope hashes and chain commitments before reviewer decryption.
   - [x] Exercise reviewer acknowledge/accept and owner patch in separate authenticated contexts.
   - [x] Add live integration tests for wrong reviewer, invalid state, and patch-before-accept.
-- [ ] Phase 6 — Implement tested custody/settlement or honest receipt-linked fallback.
+- [x] Phase 6 — Implement tested custody/settlement or honest receipt-linked fallback.
   - [x] Spike installed wallet SDK `transferTransaction` with real local NIGHT, distinct recipient, and recipient-wallet balance check.
   - [x] Freeze fallback semantics: receipt-linked, non-atomic, transparent; never call it escrow/shielded/trustless.
-  - [ ] Bind a salted researcher payout-recipient commitment at submission; record only receipt hash after patch.
-  - [ ] Add payout receipt/double-action/authorization simulator and live tests.
+  - [x] Bind a salted researcher payout-recipient commitment at submission; record only receipt hash after patch.
+  - [x] Add payout receipt/double-action/authorization simulator and live tests.
 - [ ] Phase 7 — Build Next.js product UI around proven flows.
 - [ ] Phase 8 — Complete sentinel, CSP, attachment, recovery, accessibility, E2E hardening.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.
@@ -43,6 +43,7 @@
 - [x] Phase 3: XChaCha/Curve25519 round trip, Compact-compatible commitment verification, tamper/wrong-key/key-rotation tests, ciphertext storage, encrypted recovery, separate-process reviewer, and sentinel storage tests.
 - [x] Phase 4: generated witnesses, six-circuit state-machine simulator, live local deploy, encrypted fixture commitment submission, and indexed-state confirmation.
 - [x] Phase 5: encrypted reviewer-key state, separate-process chain-first decryption, live negative authorization/state proofs, acceptance, patch, and indexed confirmation.
+- [x] Phase 6: signed local NIGHT transfer, recipient-wallet confirmation, researcher-only receipt acknowledgment, and indexed `PAID` state.
 
 ## Review
 
@@ -59,6 +60,7 @@
 - Implemented browser-safe XChaCha20-Poly1305 report encryption, sealed reviewer key envelopes, Compact-runtime commitment verification, ciphertext-only storage, encrypted account-scoped recovery, and IndexedDB adapters.
 - Added typed Vulna providers/witnesses and a proof-backed local deployment fixture; consolidated lifecycle calls into three public, role-bounded dispatch circuits so the single contract fits the local node's verifier-key deployment limit.
 - Added encrypted versioned reviewer-key state, role-isolated local proof contexts, and a live complete confidential lifecycle fixture.
+- Added non-atomic receipt-linked settlement: salted recipient commitment, opaque SDK receipt hash, and researcher-only `PAID` acknowledgment.
 
 ### Verified
 
@@ -70,16 +72,16 @@
 - Phase 3: `pnpm test` (15 protocol/crypto/storage + 2 Compact simulator tests), `pnpm run build`, `pnpm run test:e2e`, `pnpm audit --prod --audit-level=high`, and `git diff --check` pass.
 - Phase 4: `pnpm test` (17 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass.
 - Phase 5: `pnpm test` (19 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `0636cae28615b2be09989c086df9475532918f2f9d1608ba1046126dce0a3fea`.
+- Phase 6: `pnpm test` (21 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `48af20177f2c37004763a862bb1e82f8c5484c247dc93a08801fdb09819fc90f`.
 
 ### Risks
 
 - `pnpm install` reports ignored optional dependency build scripts; re-check before browser/build work.
-- Atomic shielded payout is unproven; Phase 6 must spike it before product claims.
+- Atomic shielded custody/refund remains unproven. The MVP records only an honestly labeled, transparent non-atomic settlement receipt.
 - Compact/client commitment parity is explicitly deferred to Phase 2 generated-contract tests; no custom commitment primitive exists in application code.
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
-- Payout/`PAID` is intentionally absent until Phase 6 proves custody or an honestly labeled receipt-linked fallback.
 
 ### Follow-ups
 
-- Start Phase 6 custody/settlement spike; do not claim escrow or payout until it proves custody/refund semantics.
+- Start Phase 7 product UI around the proven encrypted lifecycle and its non-atomic settlement boundary.

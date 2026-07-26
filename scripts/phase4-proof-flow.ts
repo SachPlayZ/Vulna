@@ -141,6 +141,7 @@ async function main(): Promise<void> {
       bytes32FromHex(severityCommitmentValue),
       bytes32FromHex(ownershipCommitment),
       bytes32FromHex(nullifier),
+      bytes32FromHex(randomHex()),
     );
 
     const address = deployed.deployTxData.public.contractAddress;

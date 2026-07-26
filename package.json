@@ -9,7 +9,7 @@
     "compile": "compact compile contracts/hello-world.compact contracts/managed/hello-world",
     "build": "npx tsc --noEmit",
     "setup": "npx tsx src/setup.ts",
-    "deploy": "npx tsx scripts/phase5-review-flow.ts",
+    "deploy": "npx tsx scripts/phase6-settlement-flow.ts",
     "cli": "npx tsx src/cli.ts",
     "check-balance": "npx tsx src/check-balance.ts",
     "network": "npx tsx src/network.ts",

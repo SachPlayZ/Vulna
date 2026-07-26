@@ -165,7 +165,7 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   expectFailure(() => sim.call('fundBounty', bountyId), 'bounty not draft');
 
   expectFailure(
-    () => sim.call('submitDisclosure', bountyId, bytes(200), artifactHash, submission.severityCommitment, submission.ownershipCommitment, submission.nullifier),
+    () => sim.call('submitDisclosure', bountyId, bytes(200), artifactHash, submission.severityCommitment, submission.ownershipCommitment, submission.nullifier, bytes(201)),
     'report commitment invalid',
   );
   const submissionId = sim.call(
@@ -176,11 +176,13 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
     submission.severityCommitment,
     submission.ownershipCommitment,
     submission.nullifier,
+    bytes(66),
   );
   assert.equal(submissionId, 1n);
   assert.equal(sim.state().submissions.lookup(submissionId).status, SubmissionStatus.COMMITTED);
+  assert.equal(sim.state().payoutRecipientCommitments.lookup(submissionId).toString(), bytes(66).toString());
   expectFailure(
-    () => sim.call('submitDisclosure', bountyId, submission.reportCommitment, artifactHash, submission.severityCommitment, submission.ownershipCommitment, submission.nullifier),
+    () => sim.call('submitDisclosure', bountyId, submission.reportCommitment, artifactHash, submission.severityCommitment, submission.ownershipCommitment, submission.nullifier, bytes(66)),
     'nullifier used',
   );
   const delayed = submissionValues(binding, {
@@ -189,15 +191,15 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   sim.setReport(delayed.digest, delayed.opening);
   sim.setSeverity(bytes(62), bytes(63));
   const delayedSubmissionId = sim.call(
-    'submitDisclosure', bountyId, delayed.reportCommitment, bytes(64), delayed.severityCommitment, delayed.ownershipCommitment, delayed.nullifier,
+    'submitDisclosure', bountyId, delayed.reportCommitment, bytes(64), delayed.severityCommitment, delayed.ownershipCommitment, delayed.nullifier, bytes(67),
   );
   sim.setReport(submission.digest, submission.opening);
   sim.setSeverity(bytes(12), bytes(13));
 
   sim.setResearcher(attackerSecret);
-  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.GRANT_ACCESS, envelopeHash, ZERO, ZERO, ZERO, ZERO), 'researcher only');
+  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.GRANT_ACCESS, envelopeHash, ZERO, ZERO, ZERO, ZERO, ZERO), 'researcher only');
   sim.setResearcher(researcherSecret);
-  sim.call('researcherTransition', submissionId, ResearcherAction.GRANT_ACCESS, envelopeHash, ZERO, ZERO, ZERO, ZERO);
+  sim.call('researcherTransition', submissionId, ResearcherAction.GRANT_ACCESS, envelopeHash, ZERO, ZERO, ZERO, ZERO, ZERO);
   assert.equal(sim.state().submissions.lookup(submissionId).status, SubmissionStatus.ACCESS_GRANTED);
 
   sim.setActor(attackerSecret);
@@ -212,16 +214,16 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   const nextSupplement = supplementValues(binding, ZERO);
   sim.setResearcher(attackerSecret);
   expectFailure(
-    () => sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, ZERO, nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash),
+    () => sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, ZERO, nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash, ZERO),
     'researcher only',
   );
   sim.setResearcher(researcherSecret);
   sim.setSupplement(nextSupplement.digest, nextSupplement.opening);
   expectFailure(
-    () => sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, bytes(250), nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash),
+    () => sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, bytes(250), nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash, ZERO),
     'supplement head mismatch',
   );
-  const supplementId = sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, ZERO, nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash);
+  const supplementId = sim.call('researcherTransition', submissionId, ResearcherAction.ADD_SUPPLEMENT, ZERO, ZERO, nextSupplement.commitment, nextSupplement.artifactHash, nextSupplement.envelopeHash, ZERO);
   assert.equal(supplementId, 1n);
   assert.equal(sim.state().supplements.lookup(supplementId).headHash.toString(), nextSupplement.headHash.toString());
   assert.equal(sim.state().submissions.lookup(submissionId).status, SubmissionStatus.UNDER_REVIEW);
@@ -234,7 +236,7 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   assert.equal(sim.state().bounties.lookup(bountyId).acceptedSubmissionId, submissionId);
   expectFailure(() => sim.call('reviewerTransition', submissionId, ReviewerAction.ACCEPT, 3n), 'wrong submission state');
   sim.setResearcher(researcherSecret);
-  expectFailure(() => sim.call('researcherTransition', delayedSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(65), ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
+  expectFailure(() => sim.call('researcherTransition', delayedSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(65), ZERO, ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
 
   sim.setActor(attackerSecret);
   expectFailure(() => sim.call('ownerTransition', bountyId, submissionId, OwnerAction.MARK_PATCHED, bytes(28)), 'owner only');
@@ -243,10 +245,20 @@ test('generated Compact lifecycle enforces roles, replay prevention, and reveal 
   assert.equal(sim.state().submissions.lookup(submissionId).status, SubmissionStatus.PATCHED);
   expectFailure(() => sim.call('ownerTransition', bountyId, 0n, OwnerAction.CANCEL_BOUNTY, ZERO), 'bounty cannot cancel');
 
+  sim.setResearcher(attackerSecret);
+  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, ZERO, ZERO, ZERO, ZERO, ZERO, bytes(69)), 'researcher only');
+  sim.setResearcher(researcherSecret);
+  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO), 'payout receipt missing');
+  sim.call('researcherTransition', submissionId, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, ZERO, ZERO, ZERO, ZERO, ZERO, bytes(70));
+  assert.equal(sim.state().submissions.lookup(submissionId).status, SubmissionStatus.PAID);
+  assert.equal(sim.state().bounties.lookup(bountyId).status, BountyStatus.PAID);
+  assert.equal(sim.state().payoutReceiptHashes.lookup(submissionId).toString(), bytes(70).toString());
+  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, ZERO, ZERO, ZERO, ZERO, ZERO, bytes(71)), 'wrong submission state');
+
   sim.setReport(bytes(29), submission.opening);
-  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.REVEAL, ZERO, ZERO, ZERO, ZERO, ZERO), 'report opening invalid');
+  expectFailure(() => sim.call('researcherTransition', submissionId, ResearcherAction.REVEAL, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO), 'report opening invalid');
   sim.setReport(submission.digest, submission.opening);
-  sim.call('researcherTransition', submissionId, ResearcherAction.REVEAL, ZERO, ZERO, ZERO, ZERO, ZERO);
+  sim.call('researcherTransition', submissionId, ResearcherAction.REVEAL, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO);
   const disclosed = sim.state().submissions.lookup(submissionId);
   assert.equal(disclosed.status, SubmissionStatus.DISCLOSED);
   assert.equal(disclosed.revealedReportDigest.toString(), submission.digest.toString());
@@ -260,7 +272,7 @@ test('generated Compact prevents rejected and withdrawn submission revival and u
   sim.call('fundBounty', cancelableId);
   sim.call('ownerTransition', cancelableId, 0n, OwnerAction.CANCEL_BOUNTY, ZERO);
   assert.equal(sim.state().bounties.lookup(cancelableId).status, BountyStatus.CANCELLED);
-  expectFailure(() => sim.call('submitDisclosure', cancelableId, bytes(33), bytes(34), bytes(35), bytes(36), bytes(37)), 'bounty not open');
+  expectFailure(() => sim.call('submitDisclosure', cancelableId, bytes(33), bytes(34), bytes(35), bytes(36), bytes(37), bytes(38)), 'bounty not open');
 
   const rejectedBinding = bytes(40);
   const rejectedId = sim.call('createBounty', reviewerKey, rejectedBinding, bytes(41), bytes(42), 2n);
@@ -269,15 +281,15 @@ test('generated Compact prevents rejected and withdrawn submission revival and u
   sim.setReport(rejected.digest, rejected.opening);
   sim.setSeverity(bytes(45), bytes(46));
   sim.setResearcher(researcherSecret);
-  const rejectedSubmissionId = sim.call('submitDisclosure', rejectedId, rejected.reportCommitment, bytes(47), rejected.severityCommitment, rejected.ownershipCommitment, rejected.nullifier);
-  sim.call('researcherTransition', rejectedSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(48), ZERO, ZERO, ZERO, ZERO);
+  const rejectedSubmissionId = sim.call('submitDisclosure', rejectedId, rejected.reportCommitment, bytes(47), rejected.severityCommitment, rejected.ownershipCommitment, rejected.nullifier, bytes(49));
+  sim.call('researcherTransition', rejectedSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(48), ZERO, ZERO, ZERO, ZERO, ZERO);
   sim.setActor(reviewerSecret);
   sim.call('reviewerTransition', rejectedSubmissionId, ReviewerAction.ACKNOWLEDGE_ACCESS, 0n);
   sim.call('reviewerTransition', rejectedSubmissionId, ReviewerAction.REJECT, 1n);
   assert.equal(sim.state().submissions.lookup(rejectedSubmissionId).status, SubmissionStatus.REJECTED);
   expectFailure(() => sim.call('reviewerTransition', rejectedSubmissionId, ReviewerAction.ACCEPT, 2n), 'wrong submission state');
   sim.setResearcher(researcherSecret);
-  expectFailure(() => sim.call('researcherTransition', rejectedSubmissionId, ResearcherAction.WITHDRAW, ZERO, ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
+  expectFailure(() => sim.call('researcherTransition', rejectedSubmissionId, ResearcherAction.WITHDRAW, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
 
   const withdrawnBinding = bytes(50);
   sim.setActor(ownerSecret);
@@ -286,8 +298,8 @@ test('generated Compact prevents rejected and withdrawn submission revival and u
   const withdrawn = submissionValues(withdrawnBinding, { digest: bytes(53), opening: bytes(54), severity: bytes(55), severityOpening: bytes(56) });
   sim.setReport(withdrawn.digest, withdrawn.opening);
   sim.setSeverity(bytes(55), bytes(56));
-  const withdrawnSubmissionId = sim.call('submitDisclosure', withdrawnId, withdrawn.reportCommitment, bytes(57), withdrawn.severityCommitment, withdrawn.ownershipCommitment, withdrawn.nullifier);
-  sim.call('researcherTransition', withdrawnSubmissionId, ResearcherAction.WITHDRAW, ZERO, ZERO, ZERO, ZERO, ZERO);
+  const withdrawnSubmissionId = sim.call('submitDisclosure', withdrawnId, withdrawn.reportCommitment, bytes(57), withdrawn.severityCommitment, withdrawn.ownershipCommitment, withdrawn.nullifier, bytes(59));
+  sim.call('researcherTransition', withdrawnSubmissionId, ResearcherAction.WITHDRAW, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO);
   assert.equal(sim.state().submissions.lookup(withdrawnSubmissionId).status, SubmissionStatus.WITHDRAWN);
-  expectFailure(() => sim.call('researcherTransition', withdrawnSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(58), ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
+  expectFailure(() => sim.call('researcherTransition', withdrawnSubmissionId, ResearcherAction.GRANT_ACCESS, bytes(58), ZERO, ZERO, ZERO, ZERO, ZERO), 'wrong submission state');
 });

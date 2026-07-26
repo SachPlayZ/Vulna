@@ -4,6 +4,7 @@ export const VULNA_SCHEMA = {
   encryptedReport: 'vulna.encrypted-report.v1',
   privateState: 'vulna.private-state.v1',
   reviewerKeyState: 'vulna.reviewer-key-state.v1',
+  settlementReceipt: 'vulna.settlement-receipt.v1',
   publicMetadata: 'vulna.public-metadata.v1',
 } as const;
 
@@ -15,6 +16,7 @@ export const VULNA_DOMAIN = {
   researcherOwnership: 'vulna:researcher-owner:v1',
   submissionNullifier: 'vulna:submission-nullifier:v1',
   bountyBinding: 'vulna:bounty-binding:v1',
+  payoutRecipient: 'vulna:payout-recipient:v1',
 } as const;
 
 for (const value of Object.values(VULNA_DOMAIN)) {

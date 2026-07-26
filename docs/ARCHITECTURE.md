@@ -36,7 +36,7 @@ Reviewer browser
 - One provider factory creates wallet, indexer, ZK, proof, and account-scoped private-state providers; local owner/researcher/reviewer fixtures use isolated encrypted state scopes even when a dev wallet is shared.
 - The canonical report is encrypted before any upload. Its plaintext and commitment openings never pass through server components, server actions, analytics, URLs, or unsafe browser persistence.
 - Contract confirmation is authoritative only after indexed state reflects it.
-- The Compact state machine and its exact public ledger surface are documented in `docs/CONTRACT_STATE_MACHINE.md`; settlement remains intentionally unimplemented until its asset semantics are tested.
+- The Compact state machine and its exact public ledger surface are documented in `docs/CONTRACT_STATE_MACHINE.md`; settlement is a tested, receipt-linked external NIGHT transfer with no contract custody.
 
 ## Required local flow
 
@@ -50,3 +50,4 @@ Reviewer browser
 8. Submit proof and wait for indexer confirmation.
 9. Reviewer fetches ciphertext, verifies indexed artifact/envelope/commitment values, then decrypts locally and proves the review transition.
 10. Owner proves patch only after indexed acceptance.
+11. Owner performs the separate transparent NIGHT transfer; the researcher proof holder verifies receipt and records only its hash after patch.

@@ -17,7 +17,7 @@ This does not hide transaction existence, circuit choice, timing, network metada
 | Report commitment, ownership commitment, nullifier | Ledger | Public | Proves fixed submission/ownership and prevents reuse. Nullifier is derived from high-entropy secret. |
 | Ciphertext artifact hash, envelope hash | Ledger | Public | Integrity reference only; still correlatable metadata. |
 | Content key, reviewer private key | Browser-local key material | Private | Decryption authority. |
-| Accepted severity band, state, patch commitment, receipt hash (Phase 6 only) | Ledger | Public | Auditable lifecycle without report content. |
+| Salted payout-recipient commitment, accepted severity band, state, patch commitment, receipt hash | Ledger | Public | Auditable non-atomic lifecycle without report content. The commitment does not hide a separate transparent transfer. |
 | Rejected-report content and notes | Encrypted local/blob data | Private | Never publish. |
 
 ## Disclosure review
@@ -29,6 +29,7 @@ Every exported circuit argument, `disclose`, ledger key, ledger value, circuit r
 - Persistent commitments/hashes survive upgrades; transient primitives never back ledger data.
 - A hash is not automatically safe: assess small domains, dictionary attacks, uniqueness, and correlation.
 - Reviewers verify ciphertext and envelope hashes before decryption, then recompute report digest and commitments locally.
+- The `PAID` status is a researcher receipt acknowledgment after a separate wallet transfer. It is not proof of transfer, escrow, shielding, or trustless settlement.
 
 ## Browser/storage rules
 

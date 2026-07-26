@@ -1,9 +1,10 @@
-/** Local proof lifecycle; only safe identifiers/statuses are printed. */
+/** Local proof + non-atomic settlement lifecycle; only safe values are printed. */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import * as path from 'node:path';
 
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
+import { MidnightBech32m, UnshieldedAddress } from '@midnight-ntwrk/wallet-sdk';
 import * as Rx from 'rxjs';
 
 import { OwnerAction, ResearcherAction, ReviewerAction, SubmissionStatus, ledger } from '../contracts/managed/hello-world/contract/index.js';
@@ -11,11 +12,12 @@ import { bytes32FromHex, reportCommitment, researcherOwnershipCommitment, roleKe
 import { createReviewerKeyPair, encryptReviewPackage, verifyCiphertextHash, verifyEnvelopeHash } from '../src/crypto/report-crypto.js';
 import { generatePrivateStateKey, MemoryEncryptedPrivateStateStore } from '../src/crypto/private-state.js';
 import { EncryptedReviewerKeyRepository } from '../src/crypto/reviewer-key-state.js';
+import { payoutRecipientCommitment, settlementReceiptHash } from '../src/crypto/settlement.js';
 import { bytesToHex, createReportDigest, sha256 } from '../src/protocol/canonicalize.js';
 import { VULNA_SCHEMA } from '../src/protocol/domain.js';
 import { getOrCreateSeed, recordDeployment, resolveNetwork } from '../src/network.js';
 import { MemoryCiphertextByteStore, VerifiedEncryptedBlobStore } from '../src/storage/encrypted-blob-store.js';
-import { createWallet, persistWalletState, type WalletContext } from '../src/wallet.js';
+import { createWallet, persistWalletState, unshieldedToken, type WalletContext } from '../src/wallet.js';
 import { createVulnaProviders, vulnaCompiledContract } from '../src/vulna-provider.js';
 import { VULNA_PRIVATE_STATE_ID, createInitialVulnaPrivateState, type VulnaPrivateState } from '../src/vulna-witnesses.js';
 
@@ -65,10 +67,20 @@ async function waitPatched(address: string, providers: ReturnType<typeof createV
   throw new Error('Indexer did not confirm the patched lifecycle.');
 }
 
-async function main(): Promise<void> {
+async function waitPaid(address: string, providers: ReturnType<typeof createVulnaProviders>): Promise<void> {
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    const state = await providers.publicDataProvider.queryContractState(address);
+    if (state && ledger(state.data).submissions.lookup(1n).status === SubmissionStatus.PAID) return;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  throw new Error('Indexer did not confirm the settlement receipt.');
+}
+
+export async function runPhase6SettlementFlow(): Promise<void> {
   const { network, config } = resolveNetwork();
-  if (network !== 'undeployed') throw new Error('Phase 5 proof flow is restricted to the local undeployed network.');
-  const wallet = await createWallet({ network, networkConfig: config, seed: getOrCreateSeed(network) });
+  if (network !== 'undeployed') throw new Error('Phase 6 settlement flow is restricted to the local undeployed network.');
+  const wallet = await createWallet({ network, networkConfig: config, seed: getOrCreateSeed(network), restore: false });
+  const recipient = await createWallet({ network, networkConfig: config, seed: randomBytes(32).toString('hex'), restore: false });
   try {
     await ensureDust(wallet);
     const ownerState = createInitialVulnaPrivateState(randomBytes);
@@ -82,6 +94,8 @@ async function main(): Promise<void> {
     const researcherSecret = bytesToHex(researcherState.researcherSecret);
     const ownership = researcherOwnershipCommitment(binding, researcherSecret, reportCommitmentValue);
     const nullifier = submissionNullifier(binding, researcherSecret, digest.digestHex);
+    const recipientAddressText = recipient.unshieldedKeystore.getBech32Address().toString();
+    const recipientCommitment = await payoutRecipientCommitment(recipientAddressText, hex());
 
     const keyStore = new MemoryEncryptedPrivateStateStore();
     const reviewerVault = new EncryptedReviewerKeyRepository('local-reviewer', await generatePrivateStateKey(), keyStore);
@@ -102,10 +116,10 @@ async function main(): Promise<void> {
     const reviewerRole = roleKey('vulna:reviewer:v1', bytesToHex(reviewerState.actorSecret));
     await deployed.callTx.createBounty(bytes32FromHex(reviewerRole), bytes32FromHex(binding), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:metadata:v1')))), bytes32FromHex(bytesToHex(await sha256(new TextEncoder().encode('vulna:phase5:scope:v1')))), 1n);
     await deployed.callTx.fundBounty(1n);
-    await researcherContract.callTx.submitDisclosure(1n, bytes32FromHex(reportCommitmentValue), bytes32FromHex(encrypted.artifactHash), bytes32FromHex(severityCommitmentValue), bytes32FromHex(ownership), bytes32FromHex(nullifier));
+    await researcherContract.callTx.submitDisclosure(1n, bytes32FromHex(reportCommitmentValue), bytes32FromHex(encrypted.artifactHash), bytes32FromHex(severityCommitmentValue), bytes32FromHex(ownership), bytes32FromHex(nullifier), bytes32FromHex(recipientCommitment));
     await mustReject(() => deployed.callTx.reviewerTransition(1n, ReviewerAction.ACKNOWLEDGE_ACCESS, 0n), 'Owner passed reviewer authorization.');
     await mustReject(() => reviewerContract.callTx.reviewerTransition(1n, ReviewerAction.ACKNOWLEDGE_ACCESS, 0n), 'Reviewer acknowledged before access grant.');
-    await researcherContract.callTx.researcherTransition(1n, ResearcherAction.GRANT_ACCESS, bytes32FromHex(encrypted.envelopeHash), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero));
+    await researcherContract.callTx.researcherTransition(1n, ResearcherAction.GRANT_ACCESS, bytes32FromHex(encrypted.envelopeHash), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero));
     await mustReject(() => deployed.callTx.ownerTransition(1n, 1n, OwnerAction.MARK_PATCHED, bytes32FromHex(hex())), 'Owner patched before acceptance.');
 
     const indexed = await ownerProviders.publicDataProvider.queryContractState(address);
@@ -119,9 +133,31 @@ async function main(): Promise<void> {
     await reviewerContract.callTx.reviewerTransition(1n, ReviewerAction.ACCEPT, 2n);
     await deployed.callTx.ownerTransition(1n, 1n, OwnerAction.MARK_PATCHED, bytes32FromHex(hex()));
     await waitPatched(address, ownerProviders, encrypted.artifactHash);
-    recordDeployment(network, address, wallet.unshieldedKeystore.getBech32Address().toString()); await persistWalletState(network, wallet);
-    process.stdout.write(`Phase 5 lifecycle confirmed: ${address}\n`);
-  } finally { await wallet.wallet.stop(); }
+    const recipientAddress = MidnightBech32m.parse(recipientAddressText).decode(UnshieldedAddress, network);
+    // Fresh wallet contexts avoid reusing a Dust spend after the long proof batch.
+    const settlementWallet = await createWallet({ network, networkConfig: config, seed: getOrCreateSeed(network), restore: false });
+    let transferId: string;
+    try {
+      await ensureDust(settlementWallet);
+      const transfer = await settlementWallet.wallet.transferTransaction([{ type: 'unshielded', outputs: [{ type: unshieldedToken().raw, receiverAddress: recipientAddress, amount: 1n }] }], {
+        shieldedSecretKeys: settlementWallet.shieldedSecretKeys, dustSecretKey: settlementWallet.dustSecretKey,
+      }, { ttl: new Date(Date.now() + 30 * 60 * 1000), payFees: true });
+      const signedTransfer = await settlementWallet.wallet.signRecipe(transfer, (payload) => settlementWallet.unshieldedKeystore.signData(payload));
+      transferId = await settlementWallet.wallet.submitTransaction(await settlementWallet.wallet.finalizeRecipe(signedTransfer));
+    } finally { await settlementWallet.wallet.stop(); }
+    await Rx.firstValueFrom(recipient.wallet.state().pipe(Rx.filter((state) => state.isSynced && state.unshielded.availableCoins.some((coin) => coin.utxo.value >= 1n))));
+    const receiptHash = await settlementReceiptHash(transferId);
+    await mustReject(() => reviewerContract.callTx.researcherTransition(1n, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(receiptHash)), 'Reviewer acknowledged settlement.');
+    const receiptWallet = await createWallet({ network, networkConfig: config, seed: getOrCreateSeed(network), restore: false });
+    try {
+      await ensureDust(receiptWallet);
+      const receiptProviders = createVulnaProviders({ walletContext: receiptWallet, network: config, privateStatePassword: process.env.PRIVATE_STATE_PASSWORD, privateStateScope: 'researcher' });
+      const receiptContract = await findDeployedContract(receiptProviders, { compiledContract: vulnaCompiledContract, contractAddress: address, privateStateId: VULNA_PRIVATE_STATE_ID, initialPrivateState: researcherState });
+      await mustReject(() => receiptContract.callTx.researcherTransition(1n, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero)), 'Missing receipt was accepted.');
+      await receiptContract.callTx.researcherTransition(1n, ResearcherAction.ACKNOWLEDGE_SETTLEMENT, bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(zero), bytes32FromHex(receiptHash));
+      await waitPaid(address, receiptProviders);
+      recordDeployment(network, address, receiptWallet.unshieldedKeystore.getBech32Address().toString()); await persistWalletState(network, receiptWallet);
+    } finally { await receiptWallet.wallet.stop(); }
+    process.stdout.write(`Phase 6 settlement confirmed: ${address}\n`);
+  } finally { await wallet.wallet.stop(); await recipient.wallet.stop(); }
 }
-
-main().catch((error: unknown) => { process.stderr.write(`Phase 5 lifecycle failed: ${error instanceof Error ? error.message : 'unknown error'}\n`); process.exitCode = 1; });

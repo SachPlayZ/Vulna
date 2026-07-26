@@ -3,7 +3,7 @@
 Privacy-preserving vulnerability disclosure and bug-bounty protocol on Midnight Network.
 
 Current implementation: encrypted client package, role-scoped witnesses,
-proof-backed reviewer acceptance/owner patch, and indexed lifecycle confirmation. See
+proof-backed reviewer acceptance/owner patch, and receipt-linked settlement. See
 [PHASE_PLAN.md](PHASE_PLAN.md).
 
 ## Quick start
@@ -21,9 +21,13 @@ npm run test:e2e
 
 1. `docker compose up -d --wait` — starts a local Midnight devnet (node, indexer, proof-server) and blocks until all three pass their healthchecks.
 2. `npm run compile` — compiles `contracts/hello-world.compact` to `contracts/managed/hello-world/`.
-3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, verifies it in a separate reviewer process, proves reviewer acceptance and owner patch, confirms it in the indexer, and writes `.midnight-state.json`.
+3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, verifies it in a separate reviewer process, proves review/patch, sends a local NIGHT test transfer, records the researcher's receipt acknowledgment, confirms it in the indexer, and writes `.midnight-state.json`.
 
-`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a patched submission is visible. It never reads private state or report plaintext.
+`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a paid receipt-linked submission is visible. It never reads private state or report plaintext.
+
+Settlement is **non-atomic** and transparent: the contract holds no NIGHT and
+the separate wallet transfer is not shielded or trustless. It records the
+researcher proof holder's receipt acknowledgment, not proof of payment.
 
 ## Local devnet
 

@@ -43,6 +43,7 @@
   - [x] Record local browser privacy-evidence videos (ignored test artifacts).
   - [ ] Deploy to Preprod with a funded user-controlled test wallet.
   - [ ] Record public Preprod transaction references after successful deployment.
+- [x] Documentation — rewrite README for the implemented Vulna MVP and verified Preview deployment.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -82,6 +83,7 @@
 - Added CSP/security headers, attachment disablement, unsaved draft protection, skip navigation, and Chromium sentinel regression coverage.
 - Added the fictional-demo runbook, browser privacy-evidence instructions, and exact Preprod funding/deployment handoff.
 - Enabled the proof-backed receipt-settlement lifecycle on public Preview/Preprod when a local private-state password is explicitly supplied; verified the harmless lifecycle on Preview.
+- Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, and explicit MVP limitations.
 
 ### Verified
 
@@ -97,6 +99,7 @@
 - Phase 7: `pnpm test` (23 protocol/crypto/witness/UI + 2 Compact simulator tests), `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. All five static product routes returned HTTP 200 with no plaintext sentinel in server-rendered HTML.
 - Phase 8: `pnpm run test:web` (2 Chromium browser tests), `pnpm test`, `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. Browser coverage confirms no sentinel in requests, public HTML, localStorage, sessionStorage, cookies, or ciphertext staged in IndexedDB.
 - Phase 9 Preview evidence: `PRIVATE_STATE_PASSWORD=<Keychain secret> pnpm run setup -- --network preview` confirmed `PAID`; `pnpm run test:e2e` confirmed public indexer state for `2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`.
+- README refresh: `pnpm run test:e2e`, Preview explorer HTTP 200, and `git diff --check` pass.
 
 ### Risks
 

@@ -1,218 +1,200 @@
 # Vulna
 
-Privacy-preserving vulnerability disclosure and bug-bounty protocol on Midnight Network.
+**Private vulnerability disclosure, with public proof of process.**
 
-Current implementation: encrypted client package, role-scoped witnesses,
-proof-backed reviewer acceptance/owner patch, and receipt-linked settlement. See
-[PHASE_PLAN.md](PHASE_PLAN.md).
+Vulna is a Midnight Network MVP for vulnerability disclosure and bug-bounty
+workflows. Researchers encrypt reports in the browser, commit only safe
+integrity references to Midnight, and give an authorized reviewer a verifiable
+local decryption path.
 
-## Quick start
+> [!WARNING]
+> Vulna's current settlement is a **transparent, non-atomic NIGHT transfer**
+> followed by a researcher receipt acknowledgment. It is not escrow, shielded
+> settlement, trustless settlement, or proof that a payment occurred.
 
-Requirements: Node 22, Docker (with Compose v2), and the Compact compiler at the version pinned in `.compact-version` at the create-mn-app repo root (the version this project was scaffolded against).
+## What is built
 
-```bash
-npm install
-export PRIVATE_STATE_PASSWORD='use-a-unique-strong-local-secret'
-npm run setup
-npm run test:e2e
+- Versioned report canonicalization, domain-separated Compact commitments, and
+  replay-preventing nullifiers.
+- Browser-side XChaCha20-Poly1305 encryption and Curve25519 sealed-key
+  envelopes via `libsodium-wrappers-sumo`.
+- Ciphertext-only storage adapters with byte-identity and hash verification.
+- Encrypted, account-scoped private-state recovery; missing state fails closed.
+- A Compact bounty/submission state machine with owner, reviewer, and
+  researcher-proof authorization.
+- Proof-backed lifecycle runner: create and open a bounty, submit, grant access, review,
+  accept, patch, external NIGHT transfer, and researcher-only receipt
+  acknowledgment.
+- Next.js App Router UI with public bounty/audit views and a client-only report
+  composer.
+- CSP, security headers, Playwright browser checks, and a plaintext-sentinel
+  regression suite.
+
+## Verified Preview deployment
+
+The harmless fictional lifecycle is deployed and indexer-confirmed on Midnight
+Preview.
+
+| Network | Contract ID | Explorer |
+| --- | --- | --- |
+| Preview | [`2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`](https://preview.midnightexplorer.com/contracts/2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75) | [Open in Midnight Explorer](https://preview.midnightexplorer.com/contracts/2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75) |
+
+The external explorer is a public, community-built service; the app's own
+verification uses the configured Midnight indexer. Preprod is not deployed yet.
+
+## Privacy boundary
+
+```mermaid
+flowchart LR
+  R["Researcher browser\nplaintext in transient memory"] -->|"canonicalize + encrypt locally"| C["Ciphertext only\nlocal/blob storage"]
+  R -->|"commitments, hashes, state inputs"| M["Midnight Compact\npublic ledger state"]
+  C -->|"verify hash, then decrypt"| V["Authorized reviewer browser"]
+  M -->|"artifact/envelope hashes + status"| V
+  M -->|"safe audit facts"| P["Public audit view"]
 ```
 
-`npm run setup` runs end-to-end with no prompts:
+| Public | Private / encrypted |
+| --- | --- |
+| Bounty and submission IDs, commitments, artifact/envelope hashes, status, accepted severity, patch commitment, receipt hash | Report text, reproduction steps, attachment data, digest/openings before voluntary reveal, researcher secret, content key, reviewer private key, and reviewer notes |
 
-1. `docker compose up -d --wait` — starts a local Midnight devnet (node, indexer, proof-server) and blocks until all three pass their healthchecks.
-2. `npm run compile` — compiles `contracts/hello-world.compact` to `contracts/managed/hello-world/`.
-3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, verifies it in a separate reviewer process, proves review/patch, sends a local NIGHT test transfer, records the researcher's receipt acknowledgment, confirms it in the indexer, and writes `.midnight-state.json`.
+Plaintext must never go on-chain or through application infrastructure before
+client-side encryption. The MVP does **not** hide network metadata or timing,
+determine whether a vulnerability is real, stop an authorized reviewer from
+leaking a decrypted report, or detect semantic duplicates from different
+researchers.
 
-`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a paid receipt-linked submission is visible. It never reads private state or report plaintext.
+Read the precise [architecture](docs/ARCHITECTURE.md),
+[privacy model](docs/PRIVACY_MODEL.md), [threat model](docs/THREAT_MODEL.md),
+and [encrypted format](docs/CRYPTO_FORMAT.md) before changing protocol code.
 
-For the fictional-demo script, browser privacy evidence, and Preprod handoff,
-see [docs/DEMO.md](docs/DEMO.md).
+## Quick start: local devnet
 
-Settlement is **non-atomic** and transparent: the contract holds no NIGHT and
-the separate wallet transfer is not shielded or trustless. It records the
-researcher proof holder's receipt acknowledgment, not proof of payment.
+Requirements: Node.js 22+, pnpm, Docker Compose v2, and the Compact compiler
+version documented in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
-## Product UI
+```bash
+pnpm install --frozen-lockfile
+export PRIVATE_STATE_PASSWORD='a-unique-local-secret'
+pnpm run setup
+pnpm run test:e2e
+```
+
+`setup` starts the local node, indexer, and proof server; compiles the Compact
+contract; then runs the complete harmless lifecycle. `test:e2e` reads only
+public indexed contract state and succeeds only once the receipt-linked `PAID`
+state is present.
+
+Start the product UI separately:
 
 ```bash
 pnpm dev
 ```
 
-Open `http://localhost:3000`. The App Router UI provides public bounty and
-audit views plus a client-only researcher composer. The composer validates,
-canonicalizes, encrypts, and stages **ciphertext only** in IndexedDB; it does
-not claim a submission is committed until a configured wallet proof and
-indexer confirmation are wired in. The reviewer route deliberately renders no
-plaintext before authenticated retrieval, integrity verification, and local
-decryption.
+Open `http://localhost:3000`. The Acme Notes pages contain fictional data only.
 
-## Local devnet
+> [!IMPORTANT]
+> The current UI encrypts and stages ciphertext in IndexedDB but deliberately
+> does not claim wallet submission or Midnight confirmation. Those proof-backed
+> operations are exercised by the lifecycle runner until wallet interaction is
+> connected to the UI.
 
-The project ships its own devnet via `docker-compose.yml`:
+## Public test networks
 
-| Service        | Port | Purpose                                         |
-| -------------- | ---- | ----------------------------------------------- |
-| `node`         | 9944 | Midnight node, `dev` chain preset               |
-| `indexer`      | 8088 | GraphQL indexer for chain state                 |
-| `proof-server` | 6300 | Generates ZK proofs for contract transactions   |
-
-State lives in container-managed volumes. Tear everything down with:
+Preview and Preprod use a user-controlled, funded **test-only** wallet. Never
+paste a recovery phrase into a command, issue, or chat. Keep generated state,
+wallet cache, and `PRIVATE_STATE_PASSWORD` local; they are gitignored.
 
 ```bash
-docker compose down -v
+# Generate/select the Preview wallet and print its public address.
+pnpm run check-balance -- --network preview
+
+# Fund that address from the Preview faucet, then run the harmless lifecycle.
+export PRIVATE_STATE_PASSWORD='a-unique-local-secret'
+pnpm run setup -- --network preview
+pnpm run test:e2e
 ```
 
-That removes all containers, networks, and volumes. The next `npm run setup` starts from a clean slate.
+Repeat with `preprod` only after funding a Preprod wallet. The network selection
+is sticky; use `pnpm run network` to inspect it or
+`pnpm run network undeployed` to return to the local devnet. Network endpoints
+and faucet URLs are defined in [`src/network.ts`](src/network.ts).
 
-## ⚠️ LOCAL DEVNET ONLY
-
-The deploy script uses a well-known genesis seed (`0000…0001`) so the
-pre-minted NIGHT in the `dev` chain preset is immediately available. **Do
-not use this seed against Preprod, mainnet, or any environment that
-handles real value** — anyone running this devnet has full access to
-funds at this seed.
-
-## Networks
-
-This DApp supports three networks:
-
-| Network | When to use | Default? |
-|---|---|---|
-| `undeployed` | Local devnet bundled in `docker-compose.yml`. Genesis seed is hardcoded; no funding needed. | yes |
-| `preview` | Public preview testnet. Faucet at `https://midnight-tmnight-preview.nethermind.dev`. |  |
-| `preprod` | Public preprod testnet. Faucet at `https://midnight-tmnight-preprod.nethermind.dev`. |  |
-
-The active network is **sticky**: whichever network you last interacted
-with stays active until you switch. Any command run with `--network <name>`
-also sets that network active for subsequent commands. The default on a
-fresh project is `undeployed` (local devnet).
-
-```sh
-npm run setup -- --network preview   # runs on preview AND makes it active
-npm run cli                          # still uses preview
-npm run check-balance                # still uses preview
-```
-
-You can also switch without running anything else:
-
-```sh
-npm run network preview         # active network is now preview
-npm run network                 # prints current active network
-npm run network undeployed      # switch back to local devnet
-```
-
-### How wallets work across networks
-
-- `undeployed` uses a hardcoded genesis seed. Local devnet pre-funds it.
-- `preview` and `preprod` generate a fresh seed on first use and store it
-  in `.midnight-state.json` (gitignored). The seed survives switching
-  networks — switch back later and your funded wallet returns.
-- **Back up your seed** if you fund a public-network wallet you care
-  about. Open `.midnight-state.json` and copy the relevant
-  `wallets.<network>.seed` value to a safe place.
-
-### Funding a public-network wallet
-
-On the first run with `--network preview` (or `preprod`):
-
-1. `setup` will print your wallet address and the faucet URL.
-2. Open the faucet URL, paste the address, request tNIGHT.
-3. `setup` polls the wallet balance every 10 s and continues automatically
-   once funds arrive.
-4. The default poll budget is 10 minutes. Override with
-   `MIDNIGHT_FAUCET_TIMEOUT_MS=1800000` (30 min) for unattended runs.
-
-If the faucet is slow or the script times out, your seed is preserved.
-Re-run `npm run setup -- --network preview` once the funds land.
-
-### Environment overrides
-
-These env vars override the active network's config (no per-network
-suffix — they apply to whichever network is active for the run):
-
-| Variable | Effect |
-|---|---|
-| `MIDNIGHT_WALLET_SEED` | Use this seed instead of generating/persisting one. Useful for CI with a pre-funded wallet. |
-| `MIDNIGHT_INDEXER_URL` | Override the indexer GraphQL URL. |
-| `MIDNIGHT_INDEXER_WS_URL` | Override the indexer WS URL. |
-| `MIDNIGHT_NODE_URL` | Override the node RPC URL. |
-| `MIDNIGHT_FAUCET_URL` | Override the faucet URL printed during setup. |
-| `MIDNIGHT_PROOF_SERVER_URL` | Override the proof server URL — set to a public proof server (e.g. `https://lace-proof-pub.preview.midnight.network`) to skip running one locally. |
-| `MIDNIGHT_FAUCET_TIMEOUT_MS` | Faucet poll budget in milliseconds (default 600000 = 10 min). |
-
-By default all networks use the **local** proof server. Public proof
-servers exist (see the env override above) but the local default keeps
-your witness data on your machine and avoids depending on a remote
-service for the deploy hot path.
-
-### Switching back to local devnet
-
-```sh
-npm run network undeployed     # or: npm run setup -- --network undeployed
-```
-
-Your preview/preprod wallet seeds and deploy addresses stay in
-`.midnight-state.json`. Switch back later, and they're still there.
-
-### Wallet sync cache
-
-After each `deploy`, `cli`, or `check-balance` run, the scripts serialize the
-wallet's synced state to `.midnight-wallet-state/<network>/` (gitignored).
-The next run on the same network restores from that snapshot and only catches
-up to the latest block instead of replaying from genesis — meaningful on
-`preview` / `preprod` where a from-seed sync takes minutes.
-
-If the cache is stale or corrupt (e.g. after an SDK upgrade with an
-incompatible state format) the wallet falls back to a fresh from-seed sync
-with a one-line warning. `npm run clean` removes the cache along with other
-generated state.
-
-## Available scripts
-
-| Script                  | Description                                                    |
-| ----------------------- | -------------------------------------------------------------- |
-| `npm run setup`         | One-shot: start devnet, compile, deploy.                       |
-| `npm run compile`       | Compile the Compact contract.                                  |
-| `npm run deploy`        | Deploy the compiled contract (requires devnet up + compiled).  |
-| `npm run cli`           | Interactive CLI to call circuits on the deployed contract.     |
-| `npm run check-balance` | Print the genesis-seed wallet's NIGHT and DUST balances.       |
-| `npm run test:e2e`      | Smoke + read-back check against the deployed contract.         |
-| `pnpm dev`              | Start the local Next.js product UI.                             |
-| `pnpm build`            | Typecheck and production-build the product UI.                  |
-| `pnpm run test:web`     | Chromium CSP, browser crypto, and plaintext-sentinel checks.    |
-| `pnpm run record:demo`  | Capture local browser demo recordings after a passing build.    |
-| `npm run clean`         | Remove `contracts/managed/`, `.midnight-state.json`, and `.midnight-wallet-state/`. |
-| `npm run proof-server:start` / `:stop` | Compose lifecycle for just the proof-server service. |
-
-## Project structure
-
-```
-vulna/
-├── contracts/
-│   └── hello-world.compact     # Compact source
-├── scripts/
-│   └── e2e-check.ts            # smoke + read-back
-├── src/
-│   ├── network.ts              # network selection + state file management
-│   ├── wallet.ts               # wallet construction + sync-state cache
-│   ├── setup.ts                # orchestrator for `npm run setup`
-│   ├── deploy.ts               # deploy the contract
-│   ├── cli.ts                  # interact with deployed contract
-│   └── check-balance.ts        # NIGHT / DUST balance
-├── docker-compose.yml          # node + indexer + proof-server
-├── .midnight-state.json        # written by deploy (gitignored)
-├── .midnight-wallet-state/     # serialized sync state per network (gitignored)
-├── package.json
-└── tsconfig.json
-```
-
-## Compact compiler version
-
-`.compact-version` at the create-mn-app repo root pinned the compiler
-version this project was scaffolded against. To upgrade your local
-compiler to that version:
+## Verification
 
 ```bash
-compact update <version>
-compact use <version>
+pnpm test                 # 23 protocol/UI tests + 2 Compact simulator tests
+pnpm run typecheck
+pnpm run build
+pnpm run test:web         # Chromium CSP + plaintext-sentinel checks
+pnpm run test:e2e         # public indexer read-back for active network
+pnpm run record:demo      # local, ignored Playwright videos
 ```
+
+Browser checks fail if the sentinel appears in rendered public HTML, request
+bodies, localStorage, sessionStorage, cookies, or IndexedDB. The private
+report remains allowed only in the editor's transient memory and an authorized
+reviewer's transient decrypted view during the test.
+
+## Contract lifecycle
+
+```text
+Committed
+  -> AccessGranted
+  -> UnderReview
+  -> NeedsMoreInfo -> UnderReview
+  -> Accepted
+  -> Patched
+  -> Paid
+  -> Disclosed (optional)
+```
+
+Alternative terminal paths are `UnderReview -> Rejected` and
+`Committed|NeedsMoreInfo -> Withdrawn`. The contract prevents nullifier replay,
+unauthorized role transitions, invalid state reversal, a second accepted
+winner, and duplicate receipt acknowledgment. See
+[docs/CONTRACT_STATE_MACHINE.md](docs/CONTRACT_STATE_MACHINE.md) for the exact
+public ledger inventory and transition guards.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm run setup [-- --network <network>]` | Start required services, compile, and run the harmless proof-backed lifecycle. |
+| `pnpm run compile` | Compile `contracts/hello-world.compact`. |
+| `pnpm run deploy [-- --network <network>]` | Run the lifecycle runner after compilation/services are ready. |
+| `pnpm run check-balance [-- --network <network>]` | Print the active test wallet's public address and tNIGHT/DUST balances. |
+| `pnpm run network [network]` | Show or set `undeployed`, `preview`, or `preprod`. |
+| `pnpm run test` | Protocol, crypto, storage, UI-preparation, and Compact simulator tests. |
+| `pnpm run test:web` | Build and run Chromium security/privacy checks. |
+| `pnpm run record:demo` | Record ignored local browser evidence videos. |
+| `pnpm run clean` | Remove generated contract and local wallet/network state. |
+
+## Repository map
+
+```text
+app/                   Public Next.js routes
+components/            Client-only composer and public UI components
+contracts/             Compact bounty/submission state machine
+src/crypto/            Encryption, commitments, private state, settlement
+src/protocol/          Schemas, canonicalization, transition rules
+src/storage/           Ciphertext-only storage adapters
+src/vulna-provider.ts  Single Midnight provider factory
+scripts/               Proof lifecycle, reviewer verification, E2E checks
+tests/web/             Playwright privacy-boundary tests
+docs/                  Architecture, crypto, privacy, threat, demo guidance
+```
+
+## Demo safety and limitations
+
+Use the fictional Acme Notes program and harmless text only. Do not scan,
+exploit, upload credentials, or test a real service.
+
+- Attachments are disabled in the MVP UI; no active file is rendered or run.
+- Settlement has no contract custody or refund path.
+- The local devnet uses a well-known genesis seed. It must never be used on a
+  public network or with value.
+- A Preprod deployment is pending; do not describe the Preview contract as
+  Preprod.
+
+For the complete presenter flow and evidence checklist, see
+[docs/DEMO.md](docs/DEMO.md).

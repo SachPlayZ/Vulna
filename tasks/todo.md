@@ -22,6 +22,10 @@
   - [x] Exercise reviewer acknowledge/accept and owner patch in separate authenticated contexts.
   - [x] Add live integration tests for wrong reviewer, invalid state, and patch-before-accept.
 - [ ] Phase 6 — Implement tested custody/settlement or honest receipt-linked fallback.
+  - [x] Spike installed wallet SDK `transferTransaction` with real local NIGHT, distinct recipient, and recipient-wallet balance check.
+  - [x] Freeze fallback semantics: receipt-linked, non-atomic, transparent; never call it escrow/shielded/trustless.
+  - [ ] Bind a salted researcher payout-recipient commitment at submission; record only receipt hash after patch.
+  - [ ] Add payout receipt/double-action/authorization simulator and live tests.
 - [ ] Phase 7 — Build Next.js product UI around proven flows.
 - [ ] Phase 8 — Complete sentinel, CSP, attachment, recovery, accessibility, E2E hardening.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.

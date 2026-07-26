@@ -83,7 +83,7 @@
 - Added CSP/security headers, attachment disablement, unsaved draft protection, skip navigation, and Chromium sentinel regression coverage.
 - Added the fictional-demo runbook, browser privacy-evidence instructions, and exact Preprod funding/deployment handoff.
 - Enabled the proof-backed receipt-settlement lifecycle on public Preview/Preprod when a local private-state password is explicitly supplied; verified the harmless lifecycle on Preview.
-- Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, and explicit MVP limitations.
+- Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, explicit observer-visibility table, and MVP limitations.
 
 ### Verified
 

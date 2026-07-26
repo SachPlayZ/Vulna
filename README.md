@@ -63,6 +63,18 @@ determine whether a vulnerability is real, stop an authorized reviewer from
 leaking a decrypted report, or detect semantic duplicates from different
 researchers.
 
+### What a public observer can and cannot learn
+
+| An observer can learn | An observer cannot learn from Vulna's public state or ciphertext storage |
+| --- | --- |
+| Contract activity, transaction timing, action/status progression, and the public bounty/submission identifiers | Report plaintext, reproduction steps, attachments, reviewer notes, content keys, reviewer private keys, or researcher app secrets |
+| Public commitments, artifact/envelope hashes, accepted severity, patch commitment, and receipt hash | Report digest, commitment openings, severity opening/value, or researcher ownership secret before an intentional reveal |
+| The bounty's public reward amount and the existence of a `PAID` receipt acknowledgment | The payout recipient from Vulna's ledger; it is stored there only as a salted commitment |
+
+The separate NIGHT transfer used for settlement is transparent. A network
+observer may see and correlate that transfer outside Vulna's contract, so the
+receipt hash must not be interpreted as shielded payment or payment privacy.
+
 Read the precise [architecture](docs/ARCHITECTURE.md),
 [privacy model](docs/PRIVACY_MODEL.md), [threat model](docs/THREAT_MODEL.md),
 and [encrypted format](docs/CRYPTO_FORMAT.md) before changing protocol code.

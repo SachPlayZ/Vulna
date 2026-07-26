@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 import { encryptReviewPackage, type EncryptedReportBundle, type ReviewerPublicKey } from '../crypto/report-crypto.js';
-import { reportCommitment, severityCommitment, severityValue } from '../crypto/compact-commitments.js';
-import { bytesToHex, createReportDigest } from '../protocol/canonicalize.js';
+import { reportCommitment, researcherOwnershipCommitment, severityCommitment, severityValue, submissionNullifier } from '../crypto/compact-commitments.js';
+import { bytesToHex, createReportDigest, sha256 } from '../protocol/canonicalize.js';
 import { VULNA_SCHEMA } from '../protocol/domain.js';
 import { type CanonicalReportV1, severityBandSchema } from '../protocol/schemas.js';
 
@@ -26,6 +26,15 @@ export type LocalPreparedDisclosure = Readonly<{
     reportCommitment: string;
     severityCommitment: string;
   }>;
+  witnessValues: Readonly<{
+    reportDigest: string;
+    reportOpening: string;
+    severityValue: string;
+    severityOpening: string;
+    ownershipCommitment: string;
+    nullifier: string;
+    payoutRecipientCommitment: string;
+  }>;
 }>;
 
 function randomHex(): string {
@@ -34,10 +43,10 @@ function randomHex(): string {
   return bytesToHex(bytes);
 }
 
-function reportFromForm(input: ReportDraftForm): CanonicalReportV1 {
+function reportFromForm(input: ReportDraftForm, bountyId = '1'): CanonicalReportV1 {
   return {
     schema: VULNA_SCHEMA.report,
-    bountyId: '1',
+    bountyId,
     title: input.title,
     summary: input.summary,
     vulnerabilityType: 'Authorization',
@@ -52,11 +61,11 @@ function reportFromForm(input: ReportDraftForm): CanonicalReportV1 {
 }
 
 /** Browser-only preparation. It returns safe references and encrypted bytes, never plaintext persistence. */
-export async function prepareLocalDisclosure(input: ReportDraftForm, reviewer: ReviewerPublicKey): Promise<LocalPreparedDisclosure> {
+export async function prepareLocalDisclosure(input: ReportDraftForm, reviewer: ReviewerPublicKey, context?: Readonly<{ bountyId: string; bountyBinding: string; researcherSecret: string; payoutRecipientSeed: string }>): Promise<LocalPreparedDisclosure> {
   const form = reportDraftFormSchema.parse(input);
-  const report = reportFromForm(form);
+  const report = reportFromForm(form, context?.bountyId ?? '1');
   const { digestHex } = await createReportDigest(report);
-  const bountyBinding = randomHex();
+  const bountyBinding = context?.bountyBinding ?? randomHex();
   const reportOpening = randomHex();
   const severityOpening = randomHex();
   const reportCommitmentValue = reportCommitment(bountyBinding, digestHex, reportOpening);
@@ -65,6 +74,7 @@ export async function prepareLocalDisclosure(input: ReportDraftForm, reviewer: R
     await severityValue(report.severityClaim.band),
     severityOpening,
   );
+  const severityValueHex = await severityValue(report.severityClaim.band);
   const bundle = await encryptReviewPackage({
     context: {
       bountyId: report.bountyId,
@@ -78,6 +88,10 @@ export async function prepareLocalDisclosure(input: ReportDraftForm, reviewer: R
     reportCommitmentOpening: reportOpening,
     severityCommitmentOpening: severityOpening,
   });
+  const researcherSecret = context?.researcherSecret ?? randomHex();
+  const ownershipCommitment = researcherOwnershipCommitment(bountyBinding, researcherSecret, reportCommitmentValue);
+  const nullifier = submissionNullifier(bountyBinding, researcherSecret, digestHex);
+  const payoutRecipientCommitment = bytesToHex(await sha256(new TextEncoder().encode(`vulna:payout-recipient:v1:${context?.payoutRecipientSeed ?? randomHex()}`)));
   return {
     bundle,
     publicReference: {
@@ -86,5 +100,6 @@ export async function prepareLocalDisclosure(input: ReportDraftForm, reviewer: R
       reportCommitment: reportCommitmentValue,
       severityCommitment: severityCommitmentValue,
     },
+    witnessValues: { reportDigest: digestHex, reportOpening, severityValue: severityValueHex, severityOpening, ownershipCommitment, nullifier, payoutRecipientCommitment },
   };
 }

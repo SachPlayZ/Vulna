@@ -83,6 +83,12 @@ researchers.
 
 Encrypted report envelopes use a public, immutable Vercel Blob relay. An observer may retrieve ciphertext by URL and learn its byte length, timing, and safe envelope metadata; they cannot decrypt or alter a report without the reviewer's private key and failing the browser's hash checks.
 
+## Preview wallet flow
+
+The hosted dApp now serves the V2 proving assets directly to a connected Preview wallet. On **Bounties**, an owner deploys V2, creates a draft bounty using the reviewer’s public role commitment and X25519 key, then opens it in a second transaction. On **Researcher**, a researcher loads that V2 contract, encrypts locally to the on-chain reviewer key, uploads only the opaque envelope, submits the disclosure proof, waits for indexer confirmation, and grants reviewer access in a second proof transaction. The browser stores only encrypted account-scoped witness state; it never fabricates a transaction ID or success state.
+
+The previous Preview V1 deployment is already `PAID` and cannot accept new reports. Deploy a fresh V2 contract from the connected wallet before using this flow.
+
 The separate NIGHT transfer used for settlement is transparent. A network
 observer may see and correlate that transfer outside Vulna's contract, so the
 receipt hash must not be interpreted as shielded payment or payment privacy.

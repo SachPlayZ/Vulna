@@ -14,7 +14,12 @@ const nextConfig: NextConfig = {
     }];
   },
   webpack(config) {
-    config.experiments = { ...(config.experiments ?? {}), syncWebAssembly: true };
+    config.experiments = { ...(config.experiments ?? {}), asyncWebAssembly: true, syncWebAssembly: true, topLevelAwait: true };
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      'isomorphic-ws': require.resolve('./src/web/browser-websocket.ts'),
+    };
+    config.resolve.fallback = { ...(config.resolve.fallback ?? {}), fs: false, net: false, tls: false, child_process: false };
     config.resolve.extensionAlias = {
       ...(config.resolve.extensionAlias ?? {}),
       '.js': ['.ts', '.tsx', '.js'],

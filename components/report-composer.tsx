@@ -3,29 +3,35 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { createReviewerKeyPair, type ReviewerPublicKey } from '../src/crypto/report-crypto';
-import { IndexedDbCiphertextByteStore, VerifiedEncryptedBlobStore } from '../src/storage/encrypted-blob-store';
+import { type ReviewerPublicKey } from '../src/crypto/report-crypto';
+import { bytes32FromHex } from '../src/crypto/compact-commitments';
+import { bytesToHex, sha256 } from '../src/protocol/canonicalize';
+import { uploadOpaqueEnvelope } from '../src/storage/opaque-envelope';
+import { grantReviewerAccess, initializeResearcherWitnessState, listIndexedBounties, saveDisclosureWitnessState, submitDisclosure, type IndexedBounty } from '../src/web/browser-vulna';
 import { prepareLocalDisclosure, reportDraftFormSchema, type ReportDraftForm } from '../src/web/report-draft';
 import { useWallet } from './wallet/wallet-provider';
 
-type Stage = 'draft' | 'encrypted' | 'staged';
+type Stage = 'draft' | 'encrypted' | 'staged' | 'committed' | 'confirmed';
 
 const stages: ReadonlyArray<{ key: Stage | 'committed' | 'confirmed'; label: string }> = [
   { key: 'draft', label: 'Local draft' },
   { key: 'encrypted', label: 'Encrypted locally' },
-  { key: 'staged', label: 'Ciphertext staged locally' },
+  { key: 'staged', label: 'Ciphertext uploaded' },
   { key: 'committed', label: 'Commitment submitted' },
   { key: 'confirmed', label: 'Confirmed on Midnight' },
 ];
 
 export function ReportComposer() {
-  const { isConnected } = useWallet();
+  const { address, api, isConnected } = useWallet();
   const { register, handleSubmit, formState: { errors, isDirty, isSubmitting }, reset } = useForm<ReportDraftForm>({
     defaultValues: { severity: 'high', remediation: '' },
   });
   const [stage, setStage] = useState<Stage>('draft');
   const [notice, setNotice] = useState('Draft remains only in this tab.');
   const [references, setReferences] = useState<Readonly<{ artifactHash: string; envelopeHash: string }> | null>(null);
+  const [contractAddress, setContractAddress] = useState('');
+  const [bounties, setBounties] = useState<ReadonlyArray<IndexedBounty>>([]);
+  const [selectedBounty, setSelectedBounty] = useState('');
 
   useEffect(() => {
     const warnOnExit = (event: BeforeUnloadEvent) => {
@@ -37,49 +43,55 @@ export function ReportComposer() {
     return () => window.removeEventListener('beforeunload', warnOnExit);
   }, [isDirty, isSubmitting]);
 
+  const loadBounties = async () => {
+    if (!api || !address || !contractAddress.trim()) { setNotice('Connect a Preview wallet and enter a V2 contract address first.'); return; }
+    setNotice('Reading indexed V2 bounty state…');
+    try {
+      const next = await listIndexedBounties(api, address, contractAddress.trim());
+      setBounties(next);
+      setSelectedBounty(next[0] ? String(next[0].id) : '');
+      setNotice(next.length ? 'Select an open bounty, then encrypt and submit from this wallet.' : 'No V2 bounties are indexed on this contract yet.');
+    } catch { setNotice('The V2 contract could not be read. Check the address and Preview wallet network.'); }
+  };
+
   const submit = handleSubmit(async (values) => {
     setNotice('Validating and encrypting locally…');
     setReferences(null);
-    let reviewer: ReviewerPublicKey;
-    try {
-      const parsed = reportDraftFormSchema.parse(values);
-      reviewer = await createReviewerKeyPair(1);
-    } catch {
+    const bounty = bounties.find((candidate) => String(candidate.id) === selectedBounty);
+    if (!api || !address || !contractAddress.trim() || !bounty) {
       setStage('draft');
-      setNotice('The reviewer encryption key could not be prepared. No report data was uploaded or submitted.');
+      setNotice('Connect a wallet, load the V2 contract, and choose an indexed bounty first.');
       return;
     }
     try {
       const parsed = reportDraftFormSchema.parse(values);
-      const prepared = await prepareLocalDisclosure(parsed, reviewer);
+      const privateState = await initializeResearcherWitnessState(api, address, contractAddress.trim());
+      const reviewer: ReviewerPublicKey = { publicKey: bounty.reviewerEncryptionPublicKey, keyId: bytesToHex(await sha256(bounty.reviewerEncryptionPublicKey)), keyVersion: Number(bounty.reviewerKeyVersion) };
+      const prepared = await prepareLocalDisclosure(parsed, reviewer, {
+        bountyId: String(bounty.id), bountyBinding: bytesToHex(bounty.binding), researcherSecret: bytesToHex(privateState.researcherSecret), payoutRecipientSeed: address,
+      });
       setStage('encrypted');
-      setNotice('Encrypted locally. Verifying the ciphertext before local staging…');
-      await stageCiphertext(prepared);
+      setNotice('Encrypted locally. Uploading only the opaque envelope…');
+      await uploadOpaqueEnvelope(prepared.bundle);
+      setStage('staged');
+      await saveDisclosureWitnessState(api, address, contractAddress.trim(), {
+        reportDigest: bytes32FromHex(prepared.witnessValues.reportDigest), reportOpening: bytes32FromHex(prepared.witnessValues.reportOpening),
+        severityValue: bytes32FromHex(prepared.witnessValues.severityValue), severityOpening: bytes32FromHex(prepared.witnessValues.severityOpening),
+      });
+      setNotice('Ciphertext uploaded. Approve the commitment transaction in your wallet…');
+      const submissionId = await submitDisclosure(api, address, contractAddress.trim(), [bounty.id, bytes32FromHex(prepared.publicReference.reportCommitment), bytes32FromHex(prepared.publicReference.artifactHash), bytes32FromHex(prepared.publicReference.severityCommitment), bytes32FromHex(prepared.witnessValues.ownershipCommitment), bytes32FromHex(prepared.witnessValues.nullifier), bytes32FromHex(prepared.witnessValues.payoutRecipientCommitment)]);
+      setStage('committed');
+      setNotice('Commitment indexed. Approve the reviewer-access transaction in your wallet…');
+      await grantReviewerAccess(api, address, contractAddress.trim(), submissionId, bytes32FromHex(prepared.publicReference.envelopeHash));
+      setStage('confirmed');
+      setReferences({ artifactHash: prepared.publicReference.artifactHash, envelopeHash: prepared.publicReference.envelopeHash });
+      reset();
+      setNotice('Confirmed on Midnight. The reviewer can fetch and verify the encrypted envelope.');
     } catch {
       setStage('draft');
-      setNotice('The report could not be encrypted. No report data was uploaded or submitted.');
+      setNotice('The report flow stopped. No transaction is marked successful until indexed state confirms it.');
     }
   });
 
-  const stageCiphertext = async (prepared: Awaited<ReturnType<typeof prepareLocalDisclosure>>) => {
-    try {
-      const store = new VerifiedEncryptedBlobStore(new IndexedDbCiphertextByteStore());
-      await store.put(prepared.bundle.ciphertext, {
-        bountyId: '1',
-        submissionTempId: prepared.bundle.envelope.publicMetadata.submissionTempId,
-        artifactHash: prepared.bundle.artifactHash,
-        envelopeHash: prepared.bundle.envelopeHash,
-      });
-      setStage('staged');
-      setReferences({ artifactHash: prepared.publicReference.artifactHash, envelopeHash: prepared.publicReference.envelopeHash });
-      reset();
-      setNotice(isConnected
-        ? 'Ciphertext is staged locally. Wallet connection is active, but the current Preview demo bounty is closed so no transaction is sent.'
-        : 'Ciphertext is staged locally. Connect a Preview Midnight wallet before any signing flow can begin.');
-    } catch {
-      setNotice('The ciphertext could not be staged. No report data was uploaded or submitted.');
-    }
-  };
-
-  return <section className="composer-shell"><div className="privacy-banner"><span>LOCAL ONLY</span><p>Report fields stay in component memory until browser-side encryption succeeds. No server action or analytics path is used.</p></div><ol className="progress" aria-label="Disclosure progress">{stages.map((item, index) => { const activeIndex = stages.findIndex((entry) => entry.key === stage); const current = item.key === stage; const complete = index < activeIndex; return <li className={current ? 'current' : complete ? 'complete' : ''} key={item.key}><b>{String(index + 1).padStart(2, '0')}</b><span>{item.label}</span></li>; })}</ol><form onSubmit={submit} noValidate><div className="form-grid"><label>Report title<input {...register('title', { required: true })} placeholder="Short, non-sensitive summary…" autoComplete="off" />{errors.title && <small>{errors.title.message}</small>}</label><label>Affected demo component<input {...register('affectedComponent', { required: true })} placeholder="e.g. role-gated demo route…" autoComplete="off" />{errors.affectedComponent && <small>{errors.affectedComponent.message}</small>}</label><label>Severity<select {...register('severity')}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>Summary<textarea {...register('summary', { required: true })} rows={4} placeholder="Describe the fictional issue. Never include real credentials…" autoComplete="off" />{errors.summary && <small>{errors.summary.message}</small>}</label><label>Safe reproduction<textarea {...register('reproduction', { required: true })} rows={4} placeholder="Use harmless steps for the fictional demo only…" autoComplete="off" />{errors.reproduction && <small>{errors.reproduction.message}</small>}</label><label>Impact<textarea {...register('impact', { required: true })} rows={3} placeholder="Explain the potential impact…" autoComplete="off" />{errors.impact && <small>{errors.impact.message}</small>}</label><label>Suggested remediation <em>(optional)</em><textarea {...register('remediation')} rows={3} placeholder="A safe remediation suggestion…" autoComplete="off" /></label></div><fieldset className="attachment-policy"><legend>Attachments</legend><p>Attachments are disabled in this MVP. Use harmless text in the report only; Vulna never previews or executes active files.</p></fieldset><div className="composer-footer"><p role="status" aria-live="polite">{notice}</p><button className="button button-primary" disabled={isSubmitting} type="submit">{isSubmitting ? 'Encrypting locally…' : 'Encrypt & stage ciphertext'}</button></div></form>{references && <dl className="safe-references"><div><dt>Ciphertext hash</dt><dd>{references.artifactHash.slice(0, 16)}…</dd></div><div><dt>Envelope hash</dt><dd>{references.envelopeHash.slice(0, 16)}…</dd></div></dl>}<p className="boundary-note">{isConnected ? 'Wallet connected on Preview. This public demo bounty is closed, so the app will not fabricate a proof or submit a transaction.' : 'Connect a Preview Midnight wallet before a proof-backed submission can be authorized.'}</p></section>;
+  return <section className="composer-shell"><div className="privacy-banner"><span>LOCAL ONLY</span><p>Report fields stay in component memory until browser-side encryption succeeds. No server action or analytics path is used.</p></div><div className="form-grid"><label>V2 contract address<input value={contractAddress} onChange={(event) => setContractAddress(event.target.value.trim())} placeholder="Paste the fresh Preview V2 contract ID…" autoComplete="off" /></label><label>Open bounty<select value={selectedBounty} onChange={(event) => setSelectedBounty(event.target.value)}><option value="">Load a V2 contract first</option>{bounties.filter((bounty) => bounty.status === 1).map((bounty) => <option key={String(bounty.id)} value={String(bounty.id)}>Bounty #{String(bounty.id)} · {String(bounty.rewardAmount)} policy units</option>)}</select></label><button className="button button-secondary" type="button" onClick={loadBounties}>Load V2 bounties</button></div><ol className="progress" aria-label="Disclosure progress">{stages.map((item, index) => { const activeIndex = stages.findIndex((entry) => entry.key === stage); const current = item.key === stage; const complete = index < activeIndex; return <li className={current ? 'current' : complete ? 'complete' : ''} key={item.key}><b>{String(index + 1).padStart(2, '0')}</b><span>{item.label}</span></li>; })}</ol><form onSubmit={submit} noValidate><div className="form-grid"><label>Report title<input {...register('title', { required: true })} placeholder="Short, non-sensitive summary…" autoComplete="off" />{errors.title && <small>{errors.title.message}</small>}</label><label>Affected demo component<input {...register('affectedComponent', { required: true })} placeholder="e.g. role-gated demo route…" autoComplete="off" />{errors.affectedComponent && <small>{errors.affectedComponent.message}</small>}</label><label>Severity<select {...register('severity')}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label>Summary<textarea {...register('summary', { required: true })} rows={4} placeholder="Describe the fictional issue. Never include real credentials…" autoComplete="off" />{errors.summary && <small>{errors.summary.message}</small>}</label><label>Safe reproduction<textarea {...register('reproduction', { required: true })} rows={4} placeholder="Use harmless steps for the fictional demo only…" autoComplete="off" />{errors.reproduction && <small>{errors.reproduction.message}</small>}</label><label>Impact<textarea {...register('impact', { required: true })} rows={3} placeholder="Explain the potential impact…" autoComplete="off" />{errors.impact && <small>{errors.impact.message}</small>}</label><label>Suggested remediation <em>(optional)</em><textarea {...register('remediation')} rows={3} placeholder="A safe remediation suggestion…" autoComplete="off" /></label></div><fieldset className="attachment-policy"><legend>Attachments</legend><p>Attachments are disabled in this MVP. Use harmless text in the report only; Vulna never previews or executes active files.</p></fieldset><div className="composer-footer"><p role="status" aria-live="polite">{notice}</p><button className="button button-primary" disabled={isSubmitting} type="submit">{isSubmitting ? 'Submitting proof…' : 'Encrypt, upload & submit'}</button></div></form>{references && <dl className="safe-references"><div><dt>Ciphertext hash</dt><dd>{references.artifactHash.slice(0, 16)}…</dd></div><div><dt>Envelope hash</dt><dd>{references.envelopeHash.slice(0, 16)}…</dd></div></dl>}<p className="boundary-note">{isConnected ? 'Wallet connected on Preview. The browser will request two signed proof transactions only after local encryption and Blob verification.' : 'Connect a Preview Midnight wallet before a proof-backed submission can be authorized.'}</p></section>;
 }

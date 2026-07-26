@@ -8,7 +8,8 @@
   "scripts": {
     "compile": "compact compile contracts/hello-world.compact contracts/managed/hello-world",
     "dev": "next dev",
-    "build": "next build --webpack",
+    "sync:zk": "mkdir -p public/contract/hello-world && cp -R contracts/managed/hello-world/keys contracts/managed/hello-world/zkir public/contract/hello-world/",
+    "build": "pnpm run sync:zk && next build --webpack",
     "start": "next start",
     "typecheck": "npx tsc --noEmit",
     "build:protocol": "npx tsc --noEmit",

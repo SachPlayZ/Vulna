@@ -63,10 +63,10 @@
   - [ ] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
   - [ ] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
   - [x] Add an untrusted Vercel Blob relay for canonical encrypted report envelopes; browser encrypts before upload and reviewer verifies hashes before decrypting.
-  - [ ] Serve generated ZK assets and construct browser providers from the connected wallet configuration.
-  - [ ] Persist account-scoped witness state only as encrypted IndexedDB data derived from wallet authorization.
-  - [ ] Implement owner create/open bounty and researcher submit flows with indexer confirmation.
-  - [ ] Add contract, crypto, browser, and plaintext-sentinel tests for the V2 flow.
+  - [x] Serve generated ZK assets and construct browser providers from the connected wallet configuration.
+  - [x] Persist account-scoped witness state only as encrypted IndexedDB data derived from wallet authorization.
+  - [x] Implement owner create/open bounty and researcher submit/access flows with indexer confirmation.
+  - [ ] Add live Preview proof-transaction and plaintext-sentinel tests for the V2 flow.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -116,6 +116,7 @@
 - Added a browser-only DApp Connector session for Preview Midnight. It enumerates injected wallets without hardcoded provider keys, exposes only the unshielded address, and clears state on disconnect or network changes.
 - Added a public Vercel Blob relay for immutable, content-addressed encrypted report envelopes. The browser-side upload helper verifies returned bytes before use; the server route only issues path-constrained short-lived upload tokens and never accepts report bytes.
 - Updated the pending V2 Compact ABI so each bounty binds an immutable reviewer Curve25519 public key and key version; renamed `fundBounty` to `openBounty` to avoid a false custody claim.
+- Added browser-served V2 ZK assets, a DApp Connector proof/balance/submit bridge, encrypted account-and-contract-scoped witness state, owner deploy/create/open controls, and researcher commit/grant-access controls. UI success waits for indexed state; it never relies on a fabricated connector transaction ID.
 
 ### Verified
 
@@ -152,6 +153,7 @@
 - Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
 - A connected wallet cannot submit a new disclosure yet: the confirmed Preview demo bounty is already `PAID`, and browser-served Vulna ZK assets plus an open bounty must exist before a proof-backed call can be safely enabled. The UI intentionally sends no fabricated transaction.
 - The public Blob relay is ciphertext-only but not an authenticated anti-abuse service yet; its short-lived tokens are path/content/size constrained. Add wallet-signature verification and rate limiting before high-volume production use.
+- V2 browser actions compile and pass mocked/privacy coverage, but a real Preview wallet must approve the deploy and proof calls. The connector cannot be driven from this environment, so live V2 transaction evidence remains user-controlled.
 
 ### Follow-ups
 

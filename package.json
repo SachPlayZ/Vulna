@@ -25,7 +25,8 @@
     "test:contract": "pnpm run compile && node --test scripts/contract-simulator.test.mjs",
     "test:integration": "pnpm run compile && pnpm run deploy",
     "test:settlement-spike": "tsx scripts/token-transfer-spike.ts",
-    "test:e2e": "tsx scripts/e2e-check.ts"
+    "test:e2e": "tsx scripts/e2e-check.ts",
+    "test:web": "pnpm run build && playwright test"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",
@@ -49,6 +50,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.17",

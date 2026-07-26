@@ -13,7 +13,7 @@ export function SiteNav() {
       <nav aria-label="Primary navigation">
         {links.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
       </nav>
-      <span className="network-pill"><i /> Local Midnight</span>
+      <span className="network-pill"><i aria-hidden="true" /> Local Midnight</span>
     </header>
   );
 }

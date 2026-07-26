@@ -5,7 +5,7 @@ import { SiteNav } from '../components/site-nav';
 
 export default function HomePage() {
   return (
-    <main>
+    <main id="main-content">
       <SiteNav />
       <section className="hero">
         <p className="eyebrow">Private-by-default security workflow</p>

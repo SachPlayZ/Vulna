@@ -45,7 +45,7 @@ function reportFromForm(input: ReportDraftForm): CanonicalReportV1 {
     severityClaim: { band: input.severity },
     reproductionSteps: [input.reproduction],
     impact: input.impact,
-    remediationSuggestion: input.remediation || undefined,
+    ...(input.remediation ? { remediationSuggestion: input.remediation } : {}),
     attachments: [],
     createdAtClient: new Date().toISOString(),
   };

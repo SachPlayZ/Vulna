@@ -32,7 +32,11 @@
   - [x] Build a client-only report composer using React Hook Form + Zod and local encryption before any persisted ciphertext write.
   - [x] Build researcher/reviewer views with safe local-only status, decryption, and receipt-boundary UX.
   - [x] Add unit coverage for validation, encrypted preparation, and the plaintext sentinel boundary.
-- [ ] Phase 8 — Complete sentinel, CSP, attachment, recovery, accessibility, E2E hardening.
+- [x] Phase 8 — Complete sentinel, CSP, attachment, recovery, accessibility, E2E hardening.
+  - [x] Add restrictive headers/CSP and assert them from the running app.
+  - [x] Make attachment policy explicit, retain ciphertext-only storage, and protect unsaved in-memory drafts.
+  - [x] Apply accessibility review fixes: skip link, labels, live updates, focus, reduced motion, and mobile behavior.
+  - [x] Add browser E2E for public HTML/header/sentinel boundaries and the client encryption flow.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
@@ -50,6 +54,7 @@
 - [x] Phase 5: encrypted reviewer-key state, separate-process chain-first decryption, live negative authorization/state proofs, acceptance, patch, and indexed confirmation.
 - [x] Phase 6: signed local NIGHT transfer, recipient-wallet confirmation, researcher-only receipt acknowledgment, and indexed `PAID` state.
 - [x] Phase 7: App Router production build, public route/sentinel HTML inspection, client-only encrypted draft preparation, and protocol/contract/indexer regression checks.
+- [x] Phase 8: Chromium browser tests for CSP/security headers, public HTML, client encryption, requests, browser storage, and the plaintext sentinel.
 
 ## Review
 
@@ -68,6 +73,7 @@
 - Added encrypted versioned reviewer-key state, role-isolated local proof contexts, and a live complete confidential lifecycle fixture.
 - Added non-atomic receipt-linked settlement: salted recipient commitment, opaque SDK receipt hash, and researcher-only `PAID` acknowledgment.
 - Added a strict Next.js App Router product shell with public bounty/audit pages, a client-only encrypted report composer, and plaintext-free reviewer/settlement boundary states.
+- Added CSP/security headers, attachment disablement, unsaved draft protection, skip navigation, and Chromium sentinel regression coverage.
 
 ### Verified
 
@@ -81,6 +87,7 @@
 - Phase 5: `pnpm test` (19 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `0636cae28615b2be09989c086df9475532918f2f9d1608ba1046126dce0a3fea`.
 - Phase 6: `pnpm test` (21 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `48af20177f2c37004763a862bb1e82f8c5484c247dc93a08801fdb09819fc90f`.
 - Phase 7: `pnpm test` (23 protocol/crypto/witness/UI + 2 Compact simulator tests), `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. All five static product routes returned HTTP 200 with no plaintext sentinel in server-rendered HTML.
+- Phase 8: `pnpm run test:web` (2 Chromium browser tests), `pnpm test`, `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. Browser coverage confirms no sentinel in requests, public HTML, localStorage, sessionStorage, cookies, or ciphertext staged in IndexedDB.
 
 ### Risks
 
@@ -89,8 +96,8 @@
 - Compact/client commitment parity is explicitly deferred to Phase 2 generated-contract tests; no custom commitment primitive exists in application code.
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
-- Next build emits an upstream Compact-runtime async-WASM compatibility warning; modern target browsers support async WebAssembly, but browser automation will validate the real wallet path in Phase 8.
+- The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
 
 ### Follow-ups
 
-- Start Phase 8 hardening: browser sentinel capture, CSP/security headers, attachment restrictions, accessibility, and real wallet-path browser coverage.
+- Start Phase 9: Preprod deployment, final demo documentation, and backup recording.

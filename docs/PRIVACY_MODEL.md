@@ -37,4 +37,10 @@ Forbidden for plaintext: `localStorage`, `sessionStorage`, cookies, URL query/fr
 
 The blob store cannot transform, compress, inspect, or reserialize ciphertext unless byte identity and hashes remain explicitly verified.
 
+The product UI sends restrictive CSP, framing, referrer, MIME-sniffing, and
+permissions headers on every route. Private report routes have no third-party
+scripts or analytics. Attachments are disabled in the MVP UI; no active file is
+rendered or executed. Draft text remains component-local and warns before page
+exit; only verified ciphertext is staged in IndexedDB.
+
 The precise encrypted report, storage, and recovery format is in `docs/CRYPTO_FORMAT.md`. The account encryption key is supplied by the wallet/private-state integration in Phase 4; no missing-state path manufactures a replacement secret or opening.

@@ -4,7 +4,7 @@
 
 - [x] Phase 0 — Scaffold Vulna; verify Compact, Docker, proof server, deploy, circuit call, and indexer read.
 - [x] Phase 1 — Freeze schemas, commitments, privacy/threat model, access rules, payout ADR.
-- [ ] Phase 2 — Implement Compact bounty/submission state machine with simulator tests.
+- [x] Phase 2 — Implement Compact bounty/submission state machine with generated-contract simulator tests.
 - [ ] Phase 3 — Implement client crypto, encrypted storage, private-state recovery, leak tests.
 - [ ] Phase 4 — Integrate wallet/providers, witnesses, real proof-backed submission, indexer confirmation.
 - [ ] Phase 5 — Implement separate-context reviewer decrypt/verify/review/patch flow.
@@ -22,6 +22,7 @@
 - [x] Phase 0: real `storeMessage` transaction + indexed state read.
 - [x] Phase 1: protocol unit tests, strict typecheck, Compact compile, privacy-output review.
 - [ ] Per phase: narrow tests, affected checks, privacy-output review, diff review.
+- [x] Phase 2: generated Compact lifecycle and negative authorization/replay simulator tests.
 
 ## Review
 
@@ -32,6 +33,9 @@
 - Renamed planning/protocol docs to Vulna.
 - Added compatibility baseline and ignored generated local private-state database.
 - Added strict schemas, canonicalization vectors, state-transition guards, privacy/threat/architecture docs, and protocol ADRs.
+- Implemented Phase 2 Compact lifecycle, append-only encrypted supplements, DApp-specific role commitments, nullifier replay prevention, and optional proof-gated digest reveal.
+- Added generated-contract runtime simulator tests and an exact public-ledger/privacy inventory.
+- Kept the Phase 0 local smoke as a raw node/indexer check because its recorded `storeMessage` deployment is not the new Vulna ABI.
 
 ### Verified
 
@@ -39,6 +43,7 @@
 - Docker node, indexer, and proof server healthy.
 - Local contract deployed, transaction submitted, and ledger state indexed.
 - `pnpm test`, `pnpm exec tsc --noEmit`, and `pnpm run compile` pass for Phase 1.
+- Phase 2: `pnpm test` (7 protocol + 2 generated-contract simulator tests), `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass.
 
 ### Risks
 
@@ -46,7 +51,9 @@
 - `pnpm install` reports ignored optional dependency build scripts; re-check before browser/build work.
 - Atomic shielded payout is unproven; Phase 6 must spike it before product claims.
 - Compact/client commitment parity is explicitly deferred to Phase 2 generated-contract tests; no custom commitment primitive exists in application code.
+- Current devnet deployment is the Phase 0 scaffold ABI; Phase 4 must deploy the Vulna ABI with account-scoped witnesses before calling it through providers.
+- Payout/`PAID` is intentionally absent until Phase 6 proves custody or an honestly labeled receipt-linked fallback.
 
 ### Follow-ups
 
-- Start Phase 2.
+- Start Phase 3 client cryptography and ciphertext-only storage.

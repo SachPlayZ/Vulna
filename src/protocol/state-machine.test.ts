@@ -6,6 +6,7 @@ import { assertSubmissionTransition, canTransitionSubmission, transitionRole } f
 test('submission lifecycle permits only approved transitions', () => {
   assert.equal(canTransitionSubmission('Committed', 'AccessGranted'), true);
   assert.equal(canTransitionSubmission('AccessGranted', 'UnderReview'), true);
+  assert.equal(canTransitionSubmission('AccessGranted', 'Withdrawn'), false);
   assert.equal(canTransitionSubmission('UnderReview', 'Accepted'), true);
   assert.equal(canTransitionSubmission('Accepted', 'Patched'), true);
   assert.equal(canTransitionSubmission('Patched', 'Paid'), true);

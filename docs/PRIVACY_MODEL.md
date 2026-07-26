@@ -17,7 +17,7 @@ This does not hide transaction existence, circuit choice, timing, network metada
 | Report commitment, ownership commitment, nullifier | Ledger | Public | Proves fixed submission/ownership and prevents reuse. Nullifier is derived from high-entropy secret. |
 | Ciphertext artifact hash, envelope hash | Ledger | Public | Integrity reference only; still correlatable metadata. |
 | Content key, reviewer private key | Browser-local key material | Private | Decryption authority. |
-| Accepted severity band, state, patch commitment, receipt hash | Ledger | Public | Auditable lifecycle without report content. |
+| Accepted severity band, state, patch commitment, receipt hash (Phase 6 only) | Ledger | Public | Auditable lifecycle without report content. |
 | Rejected-report content and notes | Encrypted local/blob data | Private | Never publish. |
 
 ## Disclosure review

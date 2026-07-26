@@ -2,11 +2,328 @@ pragma language_version >= 0.23;
 
 import CompactStandardLibrary;
 
-// Public ledger state - visible on blockchain
-export ledger message: Opaque<"string">;
+// Every value in these exported ledgers is public. Report contents, report
+// digests, openings, secrets, and encryption keys remain witness-only.
+export enum BountyStatus { DRAFT, OPEN, ACCEPTED, PATCHED, CANCELLED }
+export enum SubmissionStatus { COMMITTED, ACCESS_GRANTED, UNDER_REVIEW, NEEDS_MORE_INFO, ACCEPTED, REJECTED, PATCHED, DISCLOSED, WITHDRAWN }
 
-// Circuit to store a message on the blockchain
-// The message will be publicly visible
-export circuit storeMessage(customMessage: Opaque<"string">): [] {
-    message = disclose(customMessage);
+struct Bounty {
+    owner: Bytes<32>,
+    reviewer: Bytes<32>,
+    binding: Bytes<32>,
+    metadataHash: Bytes<32>,
+    scopeHash: Bytes<32>,
+    rewardAmount: Uint<64>,
+    status: BountyStatus,
+    submissionCount: Uint<64>,
+    acceptedSubmissionId: Uint<64>
+}
+
+struct Submission {
+    bountyId: Uint<64>,
+    reportCommitment: Bytes<32>,
+    artifactHash: Bytes<32>,
+    accessEnvelopeHash: Bytes<32>,
+    severityCommitment: Bytes<32>,
+    ownershipCommitment: Bytes<32>,
+    nullifier: Bytes<32>,
+    supplementHeadHash: Bytes<32>,
+    latestSupplementId: Uint<64>,
+    supplementCount: Uint<64>,
+    moreInfoReasonCode: Uint<8>,
+    acceptedSeverity: Uint<8>,
+    patchCommitment: Bytes<32>,
+    revealedReportDigest: Bytes<32>,
+    status: SubmissionStatus
+}
+
+struct Supplement {
+    submissionId: Uint<64>,
+    commitment: Bytes<32>,
+    artifactHash: Bytes<32>,
+    envelopeHash: Bytes<32>,
+    previousHeadHash: Bytes<32>,
+    headHash: Bytes<32>
+}
+
+export ledger bounties: Map<Uint<64>, Bounty>;
+export ledger submissions: Map<Uint<64>, Submission>;
+export ledger supplements: Map<Uint<64>, Supplement>;
+export ledger usedNullifiers: Set<Bytes<32>>;
+export ledger bountyCount: Counter;
+export ledger submissionCount: Counter;
+export ledger supplementCount: Counter;
+
+witness actorSecret(): Bytes<32>;
+witness researcherSecret(): Bytes<32>;
+witness reportDigest(): Bytes<32>;
+witness reportOpening(): Bytes<32>;
+witness severityValue(): Bytes<32>;
+witness severityOpening(): Bytes<32>;
+witness supplementDigest(): Bytes<32>;
+witness supplementOpening(): Bytes<32>;
+
+pure circuit roleKey(domain: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<2, Bytes<32>>>([domain, secret]);
+}
+
+pure circuit reportCommitmentFor(binding: Bytes<32>, digest: Bytes<32>, opening: Bytes<32>): Bytes<32> {
+    return persistentCommit<Vector<3, Bytes<32>>>([pad(32, "vulna:report-commitment:v1"), binding, digest], opening);
+}
+
+pure circuit severityCommitmentFor(binding: Bytes<32>, severity: Bytes<32>, opening: Bytes<32>): Bytes<32> {
+    return persistentCommit<Vector<3, Bytes<32>>>([pad(32, "vulna:severity:v1"), binding, severity], opening);
+}
+
+pure circuit supplementCommitmentFor(binding: Bytes<32>, digest: Bytes<32>, opening: Bytes<32>): Bytes<32> {
+    return persistentCommit<Vector<3, Bytes<32>>>([pad(32, "vulna:supplement:v1"), binding, digest], opening);
+}
+
+pure circuit ownershipCommitmentFor(binding: Bytes<32>, secret: Bytes<32>, reportCommitment: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<4, Bytes<32>>>([pad(32, "vulna:researcher-owner:v1"), secret, binding, reportCommitment]);
+}
+
+pure circuit nullifierFor(binding: Bytes<32>, secret: Bytes<32>, digest: Bytes<32>): Bytes<32> {
+    return persistentHash<Vector<4, Bytes<32>>>([pad(32, "vulna:submission-nullifier:v1"), secret, binding, digest]);
+}
+
+pure circuit supplementHeadFor(
+    binding: Bytes<32>, previousHeadHash: Bytes<32>, commitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>
+): Bytes<32> {
+    return persistentHash<Vector<6, Bytes<32>>>([
+        pad(32, "vulna:supplement-head:v1"), binding, previousHeadHash, commitment, artifactHash, envelopeHash
+    ]);
+}
+
+// `createBounty` returns and stores only public identifiers and safe bounty
+// metadata hashes. The actor secret is converted into a DApp-specific owner key.
+export circuit createBounty(
+    reviewer: Bytes<32>, binding: Bytes<32>, metadataHash: Bytes<32>, scopeHash: Bytes<32>, rewardAmount: Uint<64>
+): Uint<64> {
+    assert(rewardAmount > 0, "reward must be positive");
+    bountyCount.increment(1);
+    const bountyId = bountyCount.read() as Uint<64>;
+    const owner = roleKey(pad(32, "vulna:owner:v1"), actorSecret());
+    bounties.insert(disclose(bountyId), Bounty {
+        owner: disclose(owner), reviewer: disclose(reviewer), binding: disclose(binding),
+        metadataHash: disclose(metadataHash), scopeHash: disclose(scopeHash), rewardAmount: disclose(rewardAmount),
+        status: BountyStatus.DRAFT, submissionCount: 0, acceptedSubmissionId: 0
+    });
+    return disclose(bountyId);
+}
+
+// This changes protocol availability only. It deliberately does not claim that
+// a token moved; custody is implemented and proven in Phase 6.
+export circuit fundBounty(bountyId: Uint<64>): [] {
+    const id = disclose(bountyId);
+    assert(bounties.member(id), "bounty missing");
+    const bounty = bounties.lookup(id);
+    assert(bounty.owner == roleKey(pad(32, "vulna:owner:v1"), actorSecret()), "owner only");
+    assert(bounty.status == BountyStatus.DRAFT, "bounty not draft");
+    bounties.insert(id, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
+        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount,
+        status: BountyStatus.OPEN, submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+}
+
+export circuit submitDisclosure(
+    bountyId: Uint<64>, reportCommitment: Bytes<32>, artifactHash: Bytes<32>, severityCommitment: Bytes<32>,
+    ownershipCommitment: Bytes<32>, nullifier: Bytes<32>
+): Uint<64> {
+    const id = disclose(bountyId);
+    assert(bounties.member(id), "bounty missing");
+    const bounty = bounties.lookup(id);
+    assert(bounty.status == BountyStatus.OPEN, "bounty not open");
+    assert(!usedNullifiers.member(disclose(nullifier)), "nullifier used");
+    const secret = researcherSecret();
+    const digest = reportDigest();
+    assert(reportCommitment == reportCommitmentFor(bounty.binding, digest, reportOpening()), "report commitment invalid");
+    assert(severityCommitment == severityCommitmentFor(bounty.binding, severityValue(), severityOpening()), "severity commitment invalid");
+    assert(ownershipCommitment == ownershipCommitmentFor(bounty.binding, secret, reportCommitment), "ownership invalid");
+    assert(nullifier == nullifierFor(bounty.binding, secret, digest), "nullifier invalid");
+    submissionCount.increment(1);
+    const submissionId = submissionCount.read() as Uint<64>;
+    usedNullifiers.insert(disclose(nullifier));
+    submissions.insert(disclose(submissionId), Submission { bountyId: id, reportCommitment: disclose(reportCommitment),
+        artifactHash: disclose(artifactHash), accessEnvelopeHash: pad(32, ""), severityCommitment: disclose(severityCommitment),
+        ownershipCommitment: disclose(ownershipCommitment), nullifier: disclose(nullifier), supplementHeadHash: pad(32, ""),
+        latestSupplementId: 0, supplementCount: 0, moreInfoReasonCode: 0, acceptedSeverity: 0, patchCommitment: pad(32, ""),
+        revealedReportDigest: pad(32, ""), status: SubmissionStatus.COMMITTED });
+    bounties.insert(id, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
+        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: bounty.status,
+        submissionCount: disclose((bounty.submissionCount + 1) as Uint<64>), acceptedSubmissionId: bounty.acceptedSubmissionId });
+    return disclose(submissionId);
+}
+
+export circuit grantReviewerAccess(submissionId: Uint<64>, accessEnvelopeHash: Bytes<32>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.COMMITTED, "wrong submission state");
+    assert(bounty.status == BountyStatus.OPEN, "bounty not open");
+    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: disclose(accessEnvelopeHash), severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.ACCESS_GRANTED });
+}
+
+export circuit acknowledgeAccess(submissionId: Uint<64>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.ACCESS_GRANTED, "wrong submission state");
+    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.UNDER_REVIEW });
+}
+
+// Reason codes are a bounded public taxonomy; reviewer comments remain encrypted off-chain.
+export circuit requestMoreInfo(submissionId: Uint<64>, reasonCode: Uint<8>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
+    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
+    assert(reasonCode > 0 && reasonCode < 16, "reason invalid");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: disclose(reasonCode),
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.NEEDS_MORE_INFO });
+}
+
+export circuit addEncryptedSupplement(
+    submissionId: Uint<64>, previousHeadHash: Bytes<32>, supplementCommitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>
+): Uint<64> {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
+    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
+    assert(previousHeadHash == submission.supplementHeadHash, "supplement head mismatch");
+    assert(supplementCommitment == supplementCommitmentFor(bounty.binding, supplementDigest(), supplementOpening()), "supplement commitment invalid");
+    const headHash = supplementHeadFor(bounty.binding, previousHeadHash, supplementCommitment, artifactHash, envelopeHash);
+    supplementCount.increment(1);
+    const supplementId = supplementCount.read() as Uint<64>;
+    supplements.insert(disclose(supplementId), Supplement { submissionId: id, commitment: disclose(supplementCommitment),
+        artifactHash: disclose(artifactHash), envelopeHash: disclose(envelopeHash), previousHeadHash: disclose(previousHeadHash), headHash: disclose(headHash) });
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: disclose(headHash),
+        latestSupplementId: supplementId, supplementCount: disclose((submission.supplementCount + 1) as Uint<64>), moreInfoReasonCode: 0,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.UNDER_REVIEW });
+    return disclose(supplementId);
+}
+
+export circuit acceptDisclosure(submissionId: Uint<64>, acceptedSeverity: Uint<8>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
+    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
+    assert(acceptedSeverity > 0 && acceptedSeverity < 5, "severity invalid");
+    assert(bounty.acceptedSubmissionId == 0, "winner exists");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: disclose(acceptedSeverity), patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.ACCEPTED });
+    bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
+        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.ACCEPTED,
+        submissionCount: bounty.submissionCount, acceptedSubmissionId: id });
+}
+
+export circuit rejectDisclosure(submissionId: Uint<64>, reasonCode: Uint<8>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
+    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
+    assert(reasonCode > 0 && reasonCode < 16, "reason invalid");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: disclose(reasonCode),
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.REJECTED });
+}
+
+export circuit withdrawSubmission(submissionId: Uint<64>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.COMMITTED || submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
+    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.WITHDRAWN });
+}
+
+export circuit markPatched(submissionId: Uint<64>, patchCommitment: Bytes<32>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.ACCEPTED, "wrong submission state");
+    assert(bounty.acceptedSubmissionId == id, "not winner");
+    assert(bounty.owner == roleKey(pad(32, "vulna:owner:v1"), actorSecret()), "owner only");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: disclose(patchCommitment), revealedReportDigest: submission.revealedReportDigest,
+        status: SubmissionStatus.PATCHED });
+    bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
+        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.PATCHED,
+        submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+}
+
+// Payout is intentionally absent: ADR 0002 forbids pretending that an asset
+// moved before custody or a receipt-linked settlement path is verified.
+export circuit revealReport(submissionId: Uint<64>): [] {
+    const id = disclose(submissionId);
+    assert(submissions.member(id), "submission missing");
+    const submission = submissions.lookup(id);
+    const bounty = bounties.lookup(submission.bountyId);
+    assert(submission.status == SubmissionStatus.PATCHED, "wrong submission state");
+    const secret = researcherSecret();
+    const digest = reportDigest();
+    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, secret, submission.reportCommitment), "researcher only");
+    assert(submission.reportCommitment == reportCommitmentFor(bounty.binding, digest, reportOpening()), "report opening invalid");
+    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
+        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
+        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
+        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
+        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: disclose(digest),
+        status: SubmissionStatus.DISCLOSED });
+}
+
+export circuit cancelBounty(bountyId: Uint<64>): [] {
+    const id = disclose(bountyId);
+    assert(bounties.member(id), "bounty missing");
+    const bounty = bounties.lookup(id);
+    assert(bounty.owner == roleKey(pad(32, "vulna:owner:v1"), actorSecret()), "owner only");
+    assert(bounty.status == BountyStatus.DRAFT || (bounty.status == BountyStatus.OPEN && bounty.submissionCount == 0), "bounty cannot cancel");
+    bounties.insert(id, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
+        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.CANCELLED,
+        submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
 }

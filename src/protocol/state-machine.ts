@@ -21,7 +21,7 @@ export type ProtocolRole = (typeof protocolRoles)[number];
 
 const transitions = {
   Committed: ['AccessGranted', 'Withdrawn'],
-  AccessGranted: ['UnderReview', 'Withdrawn'],
+  AccessGranted: ['UnderReview'],
   UnderReview: ['NeedsMoreInfo', 'Accepted', 'Rejected'],
   NeedsMoreInfo: ['UnderReview', 'Withdrawn'],
   Accepted: ['Patched'],
@@ -42,7 +42,6 @@ export const transitionRole: Readonly<Record<ValidSubmissionTransition, Protocol
   'Committed->AccessGranted': 'researcher',
   'Committed->Withdrawn': 'researcher',
   'AccessGranted->UnderReview': 'reviewer',
-  'AccessGranted->Withdrawn': 'researcher',
   'UnderReview->NeedsMoreInfo': 'reviewer',
   'UnderReview->Accepted': 'reviewer',
   'UnderReview->Rejected': 'reviewer',

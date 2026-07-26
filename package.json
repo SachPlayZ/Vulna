@@ -16,8 +16,9 @@
     "proof-server:start": "docker compose up -d",
     "proof-server:stop": "docker compose down",
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state",
-    "test": "pnpm run test:protocol",
+    "test": "pnpm run test:protocol && pnpm run test:contract",
     "test:protocol": "tsx --test src/protocol/*.test.ts",
+    "test:contract": "pnpm run compile && node --test scripts/contract-simulator.test.mjs",
     "test:e2e": "tsx scripts/e2e-check.ts"
   },
   "dependencies": {

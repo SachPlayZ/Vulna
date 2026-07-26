@@ -36,6 +36,7 @@ Reviewer browser
 - One provider factory creates wallet, indexer, ZK, proof, and account-scoped private-state providers.
 - The canonical report is encrypted before any upload. Its plaintext and commitment openings never pass through server components, server actions, analytics, URLs, or unsafe browser persistence.
 - Contract confirmation is authoritative only after indexed state reflects it.
+- The Compact state machine and its exact public ledger surface are documented in `docs/CONTRACT_STATE_MACHINE.md`; settlement remains intentionally unimplemented until its asset semantics are tested.
 
 ## Required local flow
 

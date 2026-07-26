@@ -48,6 +48,7 @@
   - [x] Add CI workflow for dependency install and clean-checkout privacy regression tests.
   - [x] Deploy the web UI: `https://midnight-demo-app.vercel.app`.
   - [x] Run full test suite for submission screenshot (25 passing tests).
+  - [x] Correct the hosted navigation network label to Preview Midnight.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -89,6 +90,7 @@
 - Enabled the proof-backed receipt-settlement lifecycle on public Preview/Preprod when a local private-state password is explicitly supplied; verified the harmless lifecycle on Preview.
 - Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, explicit observer-visibility table, and MVP limitations.
 - Added GitHub Actions verification and deployed the public fictional-demo UI with Vercel.
+- Corrected the hosted navigation from Local Midnight to Preview Midnight and redeployed it.
 
 ### Verified
 
@@ -107,6 +109,7 @@
 - README refresh: `pnpm run test:e2e`, Preview explorer HTTP 200, and `git diff --check` pass.
 - Submission readiness: Vercel production URL returned HTTP 200 with CSP; local `pnpm test` passed 23 protocol/privacy and 2 Compact simulator tests.
 - GitHub Actions: [CI run #2](https://github.com/SachPlayZ/Vulna/actions/runs/30214867918) passed `pnpm run test:ci` from a clean checkout.
+- Hosted network label: production alias `https://vulna-midnight.vercel.app` returned HTTP 200 with `Preview Midnight` rendered.
 
 ### Risks
 

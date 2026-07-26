@@ -1,4 +1,4 @@
-import { CompactTypeBytes, CompactTypeVector, persistentCommit } from '@midnight-ntwrk/compact-runtime';
+import { CompactTypeBytes, CompactTypeVector, persistentCommit, persistentHash } from '@midnight-ntwrk/compact-runtime';
 
 import { bytesToHex, sha256 } from '../protocol/canonicalize.js';
 import { VULNA_DOMAIN } from '../protocol/domain.js';
@@ -6,6 +6,8 @@ import type { SeverityBand } from '../protocol/schemas.js';
 
 const bytes32 = new CompactTypeBytes(32);
 const commitmentInput = new CompactTypeVector(3, bytes32);
+const roleKeyInput = new CompactTypeVector(2, bytes32);
+const ownershipInput = new CompactTypeVector(4, bytes32);
 const utf8 = new TextEncoder();
 
 function pad32(value: string): Uint8Array {
@@ -38,6 +40,40 @@ export function severityCommitment(binding: string, severity: string, opening: s
     commitmentInput,
     [pad32(VULNA_DOMAIN.severityCommitment), bytes32FromHex(binding), bytes32FromHex(severity)],
     bytes32FromHex(opening),
+  ));
+}
+
+/** Exact client equivalent of Compact `roleKey`; result is public role metadata. */
+export function roleKey(domain: string, secret: string): string {
+  return bytesToHex(persistentHash(
+    roleKeyInput,
+    [pad32(domain), bytes32FromHex(secret)],
+  ));
+}
+
+/** Exact client equivalent of Compact `ownershipCommitmentFor`. */
+export function researcherOwnershipCommitment(binding: string, secret: string, report: string): string {
+  return bytesToHex(persistentHash(
+    ownershipInput,
+    [
+      pad32(VULNA_DOMAIN.researcherOwnership),
+      bytes32FromHex(secret),
+      bytes32FromHex(binding),
+      bytes32FromHex(report),
+    ],
+  ));
+}
+
+/** Exact client equivalent of Compact `nullifierFor`. Never reuse a result. */
+export function submissionNullifier(binding: string, secret: string, digest: string): string {
+  return bytesToHex(persistentHash(
+    ownershipInput,
+    [
+      pad32(VULNA_DOMAIN.submissionNullifier),
+      bytes32FromHex(secret),
+      bytes32FromHex(binding),
+      bytes32FromHex(digest),
+    ],
   ));
 }
 

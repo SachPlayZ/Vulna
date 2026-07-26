@@ -154,176 +154,99 @@ export circuit submitDisclosure(
     return disclose(submissionId);
 }
 
-export circuit grantReviewerAccess(submissionId: Uint<64>, accessEnvelopeHash: Bytes<32>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.COMMITTED, "wrong submission state");
-    assert(bounty.status == BountyStatus.OPEN, "bounty not open");
-    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: disclose(accessEnvelopeHash), severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.ACCESS_GRANTED });
-}
+// Deployment stores one verifier key per export circuit. The local Midnight
+// node's block limit cannot hold 13 keys, so role-specific bounded dispatchers
+// keep this one contract deployable without weakening any transition checks.
+export enum ResearcherAction { GRANT_ACCESS, ADD_SUPPLEMENT, WITHDRAW, REVEAL }
+export enum ReviewerAction { ACKNOWLEDGE_ACCESS, REQUEST_MORE_INFO, ACCEPT, REJECT }
+export enum OwnerAction { MARK_PATCHED, CANCEL_BOUNTY }
 
-export circuit acknowledgeAccess(submissionId: Uint<64>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.ACCESS_GRANTED, "wrong submission state");
-    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.UNDER_REVIEW });
-}
-
-// Reason codes are a bounded public taxonomy; reviewer comments remain encrypted off-chain.
-export circuit requestMoreInfo(submissionId: Uint<64>, reasonCode: Uint<8>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
-    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
-    assert(reasonCode > 0 && reasonCode < 16, "reason invalid");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: disclose(reasonCode),
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.NEEDS_MORE_INFO });
-}
-
-export circuit addEncryptedSupplement(
-    submissionId: Uint<64>, previousHeadHash: Bytes<32>, supplementCommitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>
+export circuit researcherTransition(
+    submissionId: Uint<64>, action: ResearcherAction, accessEnvelopeHash: Bytes<32>, previousHeadHash: Bytes<32>,
+    supplementCommitment: Bytes<32>, artifactHash: Bytes<32>, envelopeHash: Bytes<32>
 ): Uint<64> {
     const id = disclose(submissionId);
     assert(submissions.member(id), "submission missing");
     const submission = submissions.lookup(id);
     const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
     assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
-    assert(previousHeadHash == submission.supplementHeadHash, "supplement head mismatch");
-    assert(supplementCommitment == supplementCommitmentFor(bounty.binding, supplementDigest(), supplementOpening()), "supplement commitment invalid");
-    const headHash = supplementHeadFor(bounty.binding, previousHeadHash, supplementCommitment, artifactHash, envelopeHash);
-    supplementCount.increment(1);
-    const supplementId = supplementCount.read() as Uint<64>;
-    supplements.insert(disclose(supplementId), Supplement { submissionId: id, commitment: disclose(supplementCommitment),
-        artifactHash: disclose(artifactHash), envelopeHash: disclose(envelopeHash), previousHeadHash: disclose(previousHeadHash), headHash: disclose(headHash) });
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: disclose(headHash),
-        latestSupplementId: supplementId, supplementCount: disclose((submission.supplementCount + 1) as Uint<64>), moreInfoReasonCode: 0,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.UNDER_REVIEW });
-    return disclose(supplementId);
+    // Public action code is intentional: distinct exported circuits previously disclosed this same operation.
+    const operation = disclose(action);
+    if (operation == ResearcherAction.GRANT_ACCESS) {
+        assert(submission.status == SubmissionStatus.COMMITTED && bounty.status == BountyStatus.OPEN, "wrong submission state");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash,
+            accessEnvelopeHash: disclose(accessEnvelopeHash), severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment,
+            nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount,
+            moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment,
+            revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.ACCESS_GRANTED });
+        return disclose(0);
+    } else if (operation == ResearcherAction.ADD_SUPPLEMENT) {
+        assert(submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
+        assert(previousHeadHash == submission.supplementHeadHash, "supplement head mismatch");
+        assert(supplementCommitment == supplementCommitmentFor(bounty.binding, supplementDigest(), supplementOpening()), "supplement commitment invalid");
+        const headHash = supplementHeadFor(bounty.binding, previousHeadHash, supplementCommitment, artifactHash, envelopeHash);
+        supplementCount.increment(1);
+        const supplementId = supplementCount.read() as Uint<64>;
+        supplements.insert(disclose(supplementId), Supplement { submissionId: id, commitment: disclose(supplementCommitment), artifactHash: disclose(artifactHash), envelopeHash: disclose(envelopeHash), previousHeadHash: disclose(previousHeadHash), headHash: disclose(headHash) });
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash,
+            accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment,
+            nullifier: submission.nullifier, supplementHeadHash: disclose(headHash), latestSupplementId: supplementId, supplementCount: disclose((submission.supplementCount + 1) as Uint<64>),
+            moreInfoReasonCode: 0, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.UNDER_REVIEW });
+        return disclose(supplementId);
+    } else if (operation == ResearcherAction.WITHDRAW) {
+        assert(submission.status == SubmissionStatus.COMMITTED || submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.WITHDRAWN });
+        return disclose(0);
+    } else if (operation == ResearcherAction.REVEAL) {
+        assert(submission.status == SubmissionStatus.PATCHED, "wrong submission state");
+        const digest = reportDigest();
+        assert(submission.reportCommitment == reportCommitmentFor(bounty.binding, digest, reportOpening()), "report opening invalid");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: disclose(digest), status: SubmissionStatus.DISCLOSED });
+        return disclose(0);
+    } else { assert(false, "action invalid"); return disclose(0); }
 }
 
-export circuit acceptDisclosure(submissionId: Uint<64>, acceptedSeverity: Uint<8>): [] {
+// Reason codes and severity are bounded public taxonomy values; comments remain encrypted off-chain.
+export circuit reviewerTransition(submissionId: Uint<64>, action: ReviewerAction, value: Uint<8>): [] {
     const id = disclose(submissionId);
     assert(submissions.member(id), "submission missing");
     const submission = submissions.lookup(id);
     const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
     assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
-    assert(acceptedSeverity > 0 && acceptedSeverity < 5, "severity invalid");
-    assert(bounty.acceptedSubmissionId == 0, "winner exists");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: disclose(acceptedSeverity), patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.ACCEPTED });
-    bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
-        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.ACCEPTED,
-        submissionCount: bounty.submissionCount, acceptedSubmissionId: id });
+    // Public action code preserves prior circuit-name metadata leakage exactly.
+    const operation = disclose(action);
+    if (operation == ReviewerAction.ACKNOWLEDGE_ACCESS) {
+        assert(submission.status == SubmissionStatus.ACCESS_GRANTED, "wrong submission state");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.UNDER_REVIEW });
+    } else if (operation == ReviewerAction.REQUEST_MORE_INFO || operation == ReviewerAction.REJECT) {
+        assert(submission.status == SubmissionStatus.UNDER_REVIEW && value > 0 && value < 16, "reason invalid");
+        const nextStatus = operation == ReviewerAction.REQUEST_MORE_INFO ? SubmissionStatus.NEEDS_MORE_INFO : SubmissionStatus.REJECTED;
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: disclose(value), acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: nextStatus });
+    } else if (operation == ReviewerAction.ACCEPT) {
+        assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
+        assert(value > 0 && value < 5, "severity invalid");
+        assert(bounty.acceptedSubmissionId == 0, "winner exists");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: disclose(value), patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.ACCEPTED });
+        bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding, metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.ACCEPTED, submissionCount: bounty.submissionCount, acceptedSubmissionId: id });
+    } else { assert(false, "action invalid"); }
 }
 
-export circuit rejectDisclosure(submissionId: Uint<64>, reasonCode: Uint<8>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.UNDER_REVIEW, "wrong submission state");
-    assert(bounty.reviewer == roleKey(pad(32, "vulna:reviewer:v1"), actorSecret()), "reviewer only");
-    assert(reasonCode > 0 && reasonCode < 16, "reason invalid");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: disclose(reasonCode),
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.REJECTED });
-}
-
-export circuit withdrawSubmission(submissionId: Uint<64>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.COMMITTED || submission.status == SubmissionStatus.NEEDS_MORE_INFO, "wrong submission state");
-    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, researcherSecret(), submission.reportCommitment), "researcher only");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.WITHDRAWN });
-}
-
-export circuit markPatched(submissionId: Uint<64>, patchCommitment: Bytes<32>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.ACCEPTED, "wrong submission state");
-    assert(bounty.acceptedSubmissionId == id, "not winner");
+export circuit ownerTransition(bountyId: Uint<64>, submissionId: Uint<64>, action: OwnerAction, patchCommitment: Bytes<32>): [] {
+    const bountyIdPublic = disclose(bountyId);
+    assert(bounties.member(bountyIdPublic), "bounty missing");
+    const bounty = bounties.lookup(bountyIdPublic);
     assert(bounty.owner == roleKey(pad(32, "vulna:owner:v1"), actorSecret()), "owner only");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: disclose(patchCommitment), revealedReportDigest: submission.revealedReportDigest,
-        status: SubmissionStatus.PATCHED });
-    bounties.insert(submission.bountyId, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
-        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.PATCHED,
-        submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
-}
-
-// Payout is intentionally absent: ADR 0002 forbids pretending that an asset
-// moved before custody or a receipt-linked settlement path is verified.
-export circuit revealReport(submissionId: Uint<64>): [] {
-    const id = disclose(submissionId);
-    assert(submissions.member(id), "submission missing");
-    const submission = submissions.lookup(id);
-    const bounty = bounties.lookup(submission.bountyId);
-    assert(submission.status == SubmissionStatus.PATCHED, "wrong submission state");
-    const secret = researcherSecret();
-    const digest = reportDigest();
-    assert(submission.ownershipCommitment == ownershipCommitmentFor(bounty.binding, secret, submission.reportCommitment), "researcher only");
-    assert(submission.reportCommitment == reportCommitmentFor(bounty.binding, digest, reportOpening()), "report opening invalid");
-    submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment,
-        artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment,
-        ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash,
-        latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode,
-        acceptedSeverity: submission.acceptedSeverity, patchCommitment: submission.patchCommitment, revealedReportDigest: disclose(digest),
-        status: SubmissionStatus.DISCLOSED });
-}
-
-export circuit cancelBounty(bountyId: Uint<64>): [] {
-    const id = disclose(bountyId);
-    assert(bounties.member(id), "bounty missing");
-    const bounty = bounties.lookup(id);
-    assert(bounty.owner == roleKey(pad(32, "vulna:owner:v1"), actorSecret()), "owner only");
-    assert(bounty.status == BountyStatus.DRAFT || (bounty.status == BountyStatus.OPEN && bounty.submissionCount == 0), "bounty cannot cancel");
-    bounties.insert(id, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding,
-        metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.CANCELLED,
-        submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+    // Public action code preserves prior circuit-name metadata leakage exactly.
+    const operation = disclose(action);
+    if (operation == OwnerAction.MARK_PATCHED) {
+        const id = disclose(submissionId);
+        assert(submissions.member(id), "submission missing");
+        const submission = submissions.lookup(id);
+        assert(submission.bountyId == bountyIdPublic && submission.status == SubmissionStatus.ACCEPTED && bounty.acceptedSubmissionId == id, "wrong submission state");
+        submissions.insert(id, Submission { bountyId: submission.bountyId, reportCommitment: submission.reportCommitment, artifactHash: submission.artifactHash, accessEnvelopeHash: submission.accessEnvelopeHash, severityCommitment: submission.severityCommitment, ownershipCommitment: submission.ownershipCommitment, nullifier: submission.nullifier, supplementHeadHash: submission.supplementHeadHash, latestSupplementId: submission.latestSupplementId, supplementCount: submission.supplementCount, moreInfoReasonCode: submission.moreInfoReasonCode, acceptedSeverity: submission.acceptedSeverity, patchCommitment: disclose(patchCommitment), revealedReportDigest: submission.revealedReportDigest, status: SubmissionStatus.PATCHED });
+        bounties.insert(bountyIdPublic, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding, metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.PATCHED, submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+    } else if (operation == OwnerAction.CANCEL_BOUNTY) {
+        assert(bounty.status == BountyStatus.DRAFT || (bounty.status == BountyStatus.OPEN && bounty.submissionCount == 0), "bounty cannot cancel");
+        bounties.insert(bountyIdPublic, Bounty { owner: bounty.owner, reviewer: bounty.reviewer, binding: bounty.binding, metadataHash: bounty.metadataHash, scopeHash: bounty.scopeHash, rewardAmount: bounty.rewardAmount, status: BountyStatus.CANCELLED, submissionCount: bounty.submissionCount, acceptedSubmissionId: bounty.acceptedSubmissionId });
+    } else { assert(false, "action invalid"); }
 }

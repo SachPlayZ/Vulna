@@ -9,7 +9,7 @@
     "compile": "compact compile contracts/hello-world.compact contracts/managed/hello-world",
     "build": "npx tsc --noEmit",
     "setup": "npx tsx src/setup.ts",
-    "deploy": "npx tsx src/deploy.ts",
+    "deploy": "npx tsx scripts/phase4-proof-flow.ts",
     "cli": "npx tsx src/cli.ts",
     "check-balance": "npx tsx src/check-balance.ts",
     "network": "npx tsx src/network.ts",
@@ -17,8 +17,9 @@
     "proof-server:stop": "docker compose down",
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state",
     "test": "pnpm run test:protocol && pnpm run test:contract",
-    "test:protocol": "tsx --test src/protocol/*.test.ts src/crypto/*.test.ts src/storage/*.test.ts",
+    "test:protocol": "tsx --test src/*.test.ts src/protocol/*.test.ts src/crypto/*.test.ts src/storage/*.test.ts",
     "test:contract": "pnpm run compile && node --test scripts/contract-simulator.test.mjs",
+    "test:integration": "pnpm run compile && pnpm run deploy",
     "test:e2e": "tsx scripts/e2e-check.ts"
   },
   "dependencies": {

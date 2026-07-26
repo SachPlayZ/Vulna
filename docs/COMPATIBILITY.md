@@ -38,6 +38,15 @@ The official quickstart currently mentions Compact compiler `0.31.0`; the compat
 
 Never commit `.midnight-state.json`, `.midnight-wallet-state/`, `midnight-level-db/`, `contracts/managed/`, or `node_modules/`. They contain deployment state, wallet sync/private state, generated artifacts, or installed packages.
 
+## Observed deployment bound
+
+The node `1.0.0` `dev` preset rejects a 13-circuit contract deployment with
+`Transaction would exhaust the block limits`. Each generated verifier key is
+about 2.1 KiB, so the constructor's verifier-key state exceeds the local block
+budget. Keep Vulna as one protocol contract, but group lifecycle-only actions
+behind bounded role dispatch circuits before integration deployment. This does
+not change public/private fields or state-machine invariants.
+
 ## Command note
 
 Use `pnpm run setup`, not `pnpm setup`: pnpm reserves `setup` for its own command and will not run the package script.

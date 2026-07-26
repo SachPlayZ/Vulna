@@ -2,7 +2,9 @@
 
 Privacy-preserving vulnerability disclosure and bug-bounty protocol on Midnight Network.
 
-This Phase 0 scaffold proves the current local Midnight toolchain. Product protocol work starts in Phase 1; see [PHASE_PLAN.md](PHASE_PLAN.md).
+Current implementation: encrypted client package, account-scoped witnesses,
+proof-backed local submission, and indexed commitment confirmation. See
+[PHASE_PLAN.md](PHASE_PLAN.md).
 
 ## Quick start
 
@@ -10,6 +12,7 @@ Requirements: Node 22, Docker (with Compose v2), and the Compact compiler at the
 
 ```bash
 npm install
+export PRIVATE_STATE_PASSWORD='use-a-unique-strong-local-secret'
 npm run setup
 npm run test:e2e
 ```
@@ -18,9 +21,9 @@ npm run test:e2e
 
 1. `docker compose up -d --wait` — starts a local Midnight devnet (node, indexer, proof-server) and blocks until all three pass their healthchecks.
 2. `npm run compile` — compiles `contracts/hello-world.compact` to `contracts/managed/hello-world/`.
-3. `npm run deploy` — derives the genesis-seed wallet (NIGHT pre-minted), registers UTXOs for DUST generation, deploys the contract, writes `.midnight-state.json`.
+3. `npm run deploy` — derives the local wallet, deploys current Vulna ABI, encrypts a harmless in-memory fixture, submits a proof-backed commitment, confirms it in the indexer, and writes `.midnight-state.json`.
 
-`npm run test:e2e` reconnects to the deployed contract and reads its ledger state. Exits 0 if the contract is live and indexable.
+`npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a committed submission is visible. It never reads private state or report plaintext.
 
 ## Local devnet
 

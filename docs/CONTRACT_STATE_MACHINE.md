@@ -34,6 +34,13 @@ or correlation attacks; it is not the report body.
   codes, accept a submission.
 - Researcher proof: grant access, append a supplement, withdraw, reveal.
 
+The deployed ABI groups lifecycle operations into three bounded public action
+codes: `researcherTransition`, `reviewerTransition`, and `ownerTransition`.
+This preserves the same public operation metadata that individual circuit names
+previously revealed, while lowering verifier-key count from 13 to 6 so the
+current local node can deploy the one-contract MVP. Every branch repeats its
+role and state assertions; unsupported action codes fail.
+
 ```text
 Committed -> AccessGranted -> UnderReview -> NeedsMoreInfo -> UnderReview
                                               |                  |

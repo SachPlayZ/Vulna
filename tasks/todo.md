@@ -38,6 +38,9 @@
   - [x] Apply accessibility review fixes: skip link, labels, live updates, focus, reduced motion, and mobile behavior.
   - [x] Add browser E2E for public HTML/header/sentinel boundaries and the client encryption flow.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.
+  - [x] Write a safe fictional demo script and browser privacy-evidence command.
+  - [ ] Deploy to Preprod with a funded user-controlled test wallet.
+  - [ ] Record public Preprod transaction references after successful deployment.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -74,6 +77,7 @@
 - Added non-atomic receipt-linked settlement: salted recipient commitment, opaque SDK receipt hash, and researcher-only `PAID` acknowledgment.
 - Added a strict Next.js App Router product shell with public bounty/audit pages, a client-only encrypted report composer, and plaintext-free reviewer/settlement boundary states.
 - Added CSP/security headers, attachment disablement, unsaved draft protection, skip navigation, and Chromium sentinel regression coverage.
+- Added the fictional-demo runbook, browser privacy-evidence instructions, and exact Preprod funding/deployment handoff.
 
 ### Verified
 
@@ -97,7 +101,8 @@
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
 - The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
+- Preprod deployment is intentionally not attempted without a funded user-controlled test wallet; no public wallet seed is created or exposed by this task.
 
 ### Follow-ups
 
-- Start Phase 9: Preprod deployment, final demo documentation, and backup recording.
+- Phase 9 needs a funded Preprod test-wallet seed or a funded generated address before a public deployment can be attempted.

@@ -25,6 +25,9 @@ npm run test:e2e
 
 `npm run test:e2e` reads indexed Vulna public state. Exits 0 only after a paid receipt-linked submission is visible. It never reads private state or report plaintext.
 
+For the fictional-demo script, browser privacy evidence, and Preprod handoff,
+see [docs/DEMO.md](docs/DEMO.md).
+
 Settlement is **non-atomic** and transparent: the contract holds no NIGHT and
 the separate wallet transfer is not shielded or trustless. It records the
 researcher proof holder's receipt acknowledgment, not proof of payment.

@@ -29,6 +29,20 @@ Settlement is **non-atomic** and transparent: the contract holds no NIGHT and
 the separate wallet transfer is not shielded or trustless. It records the
 researcher proof holder's receipt acknowledgment, not proof of payment.
 
+## Product UI
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3000`. The App Router UI provides public bounty and
+audit views plus a client-only researcher composer. The composer validates,
+canonicalizes, encrypts, and stages **ciphertext only** in IndexedDB; it does
+not claim a submission is committed until a configured wallet proof and
+indexer confirmation are wired in. The reviewer route deliberately renders no
+plaintext before authenticated retrieval, integrity verification, and local
+decryption.
+
 ## Local devnet
 
 The project ships its own devnet via `docker-compose.yml`:
@@ -160,6 +174,8 @@ generated state.
 | `npm run cli`           | Interactive CLI to call circuits on the deployed contract.     |
 | `npm run check-balance` | Print the genesis-seed wallet's NIGHT and DUST balances.       |
 | `npm run test:e2e`      | Smoke + read-back check against the deployed contract.         |
+| `pnpm dev`              | Start the local Next.js product UI.                             |
+| `pnpm build`            | Typecheck and production-build the product UI.                  |
 | `npm run clean`         | Remove `contracts/managed/`, `.midnight-state.json`, and `.midnight-wallet-state/`. |
 | `npm run proof-server:start` / `:stop` | Compose lifecycle for just the proof-server service. |
 

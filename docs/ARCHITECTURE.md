@@ -51,3 +51,15 @@ Reviewer browser
 9. Reviewer fetches ciphertext, verifies indexed artifact/envelope/commitment values, then decrypts locally and proves the review transition.
 10. Owner proves patch only after indexed acceptance.
 11. Owner performs the separate transparent NIGHT transfer; the researcher proof holder verifies receipt and records only its hash after patch.
+
+## Product UI boundary
+
+The Next.js App Router serves only public bounty/audit metadata from server
+components. The report composer is a client component: report fields remain in
+component memory until it prepares the encrypted package, then its development
+adapter stages only ciphertext in IndexedDB. It intentionally labels that state
+as **ciphertext staged locally**, not uploaded or committed. A real submission
+requires configured wallet proof generation and indexed confirmation; the UI
+must not advance those states early. The reviewer surface renders no report
+content before its authorized retrieval, integrity checks, and local decrypt
+path are connected.

@@ -26,7 +26,12 @@
   - [x] Freeze fallback semantics: receipt-linked, non-atomic, transparent; never call it escrow/shielded/trustless.
   - [x] Bind a salted researcher payout-recipient commitment at submission; record only receipt hash after patch.
   - [x] Add payout receipt/double-action/authorization simulator and live tests.
-- [ ] Phase 7 — Build Next.js product UI around proven flows.
+- [x] Phase 7 — Build Next.js product UI around proven flows.
+  - [x] Add a strict Next.js App Router shell without moving private report data across an RSC boundary.
+  - [x] Build public bounty detail/audit surfaces with only safe mock/indexed metadata.
+  - [x] Build a client-only report composer using React Hook Form + Zod and local encryption before any persisted ciphertext write.
+  - [x] Build researcher/reviewer views with safe local-only status, decryption, and receipt-boundary UX.
+  - [x] Add unit coverage for validation, encrypted preparation, and the plaintext sentinel boundary.
 - [ ] Phase 8 — Complete sentinel, CSP, attachment, recovery, accessibility, E2E hardening.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
@@ -44,6 +49,7 @@
 - [x] Phase 4: generated witnesses, six-circuit state-machine simulator, live local deploy, encrypted fixture commitment submission, and indexed-state confirmation.
 - [x] Phase 5: encrypted reviewer-key state, separate-process chain-first decryption, live negative authorization/state proofs, acceptance, patch, and indexed confirmation.
 - [x] Phase 6: signed local NIGHT transfer, recipient-wallet confirmation, researcher-only receipt acknowledgment, and indexed `PAID` state.
+- [x] Phase 7: App Router production build, public route/sentinel HTML inspection, client-only encrypted draft preparation, and protocol/contract/indexer regression checks.
 
 ## Review
 
@@ -61,6 +67,7 @@
 - Added typed Vulna providers/witnesses and a proof-backed local deployment fixture; consolidated lifecycle calls into three public, role-bounded dispatch circuits so the single contract fits the local node's verifier-key deployment limit.
 - Added encrypted versioned reviewer-key state, role-isolated local proof contexts, and a live complete confidential lifecycle fixture.
 - Added non-atomic receipt-linked settlement: salted recipient commitment, opaque SDK receipt hash, and researcher-only `PAID` acknowledgment.
+- Added a strict Next.js App Router product shell with public bounty/audit pages, a client-only encrypted report composer, and plaintext-free reviewer/settlement boundary states.
 
 ### Verified
 
@@ -73,6 +80,7 @@
 - Phase 4: `pnpm test` (17 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass.
 - Phase 5: `pnpm test` (19 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `0636cae28615b2be09989c086df9475532918f2f9d1608ba1046126dce0a3fea`.
 - Phase 6: `pnpm test` (21 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `48af20177f2c37004763a862bb1e82f8c5484c247dc93a08801fdb09819fc90f`.
+- Phase 7: `pnpm test` (23 protocol/crypto/witness/UI + 2 Compact simulator tests), `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. All five static product routes returned HTTP 200 with no plaintext sentinel in server-rendered HTML.
 
 ### Risks
 
@@ -81,7 +89,8 @@
 - Compact/client commitment parity is explicitly deferred to Phase 2 generated-contract tests; no custom commitment primitive exists in application code.
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
+- Next build emits an upstream Compact-runtime async-WASM compatibility warning; modern target browsers support async WebAssembly, but browser automation will validate the real wallet path in Phase 8.
 
 ### Follow-ups
 
-- Start Phase 7 product UI around the proven encrypted lifecycle and its non-atomic settlement boundary.
+- Start Phase 8 hardening: browser sentinel capture, CSP/security headers, attachment restrictions, accessibility, and real wallet-path browser coverage.

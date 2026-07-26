@@ -1,4 +1,4 @@
-/** Local proof + non-atomic settlement lifecycle; only safe values are printed. */
+/** Proof-backed, non-atomic settlement lifecycle; only safe values are printed. */
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import * as path from 'node:path';
@@ -78,7 +78,9 @@ async function waitPaid(address: string, providers: ReturnType<typeof createVuln
 
 export async function runPhase6SettlementFlow(): Promise<void> {
   const { network, config } = resolveNetwork();
-  if (network !== 'undeployed') throw new Error('Phase 6 settlement flow is restricted to the local undeployed network.');
+  if (network !== 'undeployed' && !process.env.PRIVATE_STATE_PASSWORD?.trim()) {
+    throw new Error('PRIVATE_STATE_PASSWORD is required for Preview or Preprod deployment.');
+  }
   const wallet = await createWallet({ network, networkConfig: config, seed: getOrCreateSeed(network), restore: false });
   const recipient = await createWallet({ network, networkConfig: config, seed: randomBytes(32).toString('hex'), restore: false });
   try {

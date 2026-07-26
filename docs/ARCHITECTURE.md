@@ -2,6 +2,20 @@
 
 Vulna separates public protocol facts from confidential vulnerability data.
 
+```mermaid
+flowchart LR
+  R["Researcher browser\nplaintext: transient memory"] -->|"canonicalize + encrypt locally"| C["Ciphertext only\nlocal store / untrusted blob store"]
+  R -->|"commitments, hashes, status inputs"| M["Midnight Compact\npublic state only"]
+  C -->|"verified ciphertext"| V["Authorized reviewer browser"]
+  M -->|"artifact/envelope hashes + state"| V
+  V -->|"decrypt + verify locally"| D["Private review package"]
+  M -->|"safe audit data"| P["Public audit timeline"]
+```
+
+Plaintext never traverses a server component, server action, URL, cookie,
+analytics call, or public ledger. The untrusted storage boundary receives only
+ciphertext and safe integrity metadata.
+
 ```text
 Researcher browser
   canonicalize → digest → encrypt → wrap reviewer key → ciphertext storage

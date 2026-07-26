@@ -39,6 +39,8 @@
   - [x] Add browser E2E for public HTML/header/sentinel boundaries and the client encryption flow.
 - [ ] Phase 9 — Deploy Preprod demo, document, record backup video.
   - [x] Write a safe fictional demo script and browser privacy-evidence command.
+  - [x] Verify the full harmless lifecycle on Preview: `2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`.
+  - [x] Record local browser privacy-evidence videos (ignored test artifacts).
   - [ ] Deploy to Preprod with a funded user-controlled test wallet.
   - [ ] Record public Preprod transaction references after successful deployment.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
@@ -58,6 +60,7 @@
 - [x] Phase 6: signed local NIGHT transfer, recipient-wallet confirmation, researcher-only receipt acknowledgment, and indexed `PAID` state.
 - [x] Phase 7: App Router production build, public route/sentinel HTML inspection, client-only encrypted draft preparation, and protocol/contract/indexer regression checks.
 - [x] Phase 8: Chromium browser tests for CSP/security headers, public HTML, client encryption, requests, browser storage, and the plaintext sentinel.
+- [x] Phase 9 (Preview evidence): full proof-backed harmless lifecycle and public indexer confirmation.
 
 ## Review
 
@@ -78,6 +81,7 @@
 - Added a strict Next.js App Router product shell with public bounty/audit pages, a client-only encrypted report composer, and plaintext-free reviewer/settlement boundary states.
 - Added CSP/security headers, attachment disablement, unsaved draft protection, skip navigation, and Chromium sentinel regression coverage.
 - Added the fictional-demo runbook, browser privacy-evidence instructions, and exact Preprod funding/deployment handoff.
+- Enabled the proof-backed receipt-settlement lifecycle on public Preview/Preprod when a local private-state password is explicitly supplied; verified the harmless lifecycle on Preview.
 
 ### Verified
 
@@ -92,6 +96,7 @@
 - Phase 6: `pnpm test` (21 protocol/crypto/witness + 2 Compact simulator tests), `pnpm run build`, `PRIVATE_STATE_PASSWORD=… pnpm run test:integration`, `pnpm run test:e2e`, and `git diff --check` pass. Current indexed local contract: `48af20177f2c37004763a862bb1e82f8c5484c247dc93a08801fdb09819fc90f`.
 - Phase 7: `pnpm test` (23 protocol/crypto/witness/UI + 2 Compact simulator tests), `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. All five static product routes returned HTTP 200 with no plaintext sentinel in server-rendered HTML.
 - Phase 8: `pnpm run test:web` (2 Chromium browser tests), `pnpm test`, `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. Browser coverage confirms no sentinel in requests, public HTML, localStorage, sessionStorage, cookies, or ciphertext staged in IndexedDB.
+- Phase 9 Preview evidence: `PRIVATE_STATE_PASSWORD=<Keychain secret> pnpm run setup -- --network preview` confirmed `PAID`; `pnpm run test:e2e` confirmed public indexer state for `2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`.
 
 ### Risks
 
@@ -101,8 +106,8 @@
 - Local integration fixture is intentionally harmless; it uses isolated local role state but one dev wallet, so it does not prove multi-wallet UX.
 - Current six-circuit ABI intentionally discloses a bounded action code; this matches the metadata distinct circuit names disclosed before consolidation.
 - The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
-- Preprod deployment is intentionally not attempted without a funded user-controlled test wallet; no public wallet seed is created or exposed by this task.
+- Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
 
 ### Follow-ups
 
-- Phase 9 needs a funded Preprod test-wallet seed or a funded generated address before a public deployment can be attempted.
+- Phase 9 still needs funding for the Preprod generated wallet address before a public Preprod deployment can be attempted.

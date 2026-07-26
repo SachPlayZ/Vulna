@@ -47,12 +47,23 @@ Chromium verifies restrictive headers and the sentinel boundary across public
 HTML, network request bodies, localStorage, sessionStorage, cookies, and
 IndexedDB ciphertext. It also exercises the browser encryption/staging path.
 
+To capture a local backup video after the checks pass:
+
+```bash
+pnpm run record:demo
+```
+
+The recordings are generated under the ignored `test-results/` directory. Keep
+them as demo artifacts; never commit test recordings containing any non-demo
+report data.
+
 ## Preprod handoff
 
 A user-controlled funded Preprod wallet is required before deployment. Do not
-reuse the local devnet genesis seed. After setting `MIDNIGHT_WALLET_SEED` to a
-funded test-only wallet (or funding the generated address shown by the setup
-command), run:
+reuse the local devnet genesis seed. The lifecycle runner supports `preprod`
+and uses the public node/indexer with the configured proof server. After
+setting `MIDNIGHT_WALLET_SEED` to a funded test-only wallet (or funding the
+generated address shown by the setup command), run:
 
 ```bash
 export MIDNIGHT_WALLET_SEED='test-only-preprod-seed'

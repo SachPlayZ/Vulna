@@ -26,7 +26,8 @@
     "test:integration": "pnpm run compile && pnpm run deploy",
     "test:settlement-spike": "tsx scripts/token-transfer-spike.ts",
     "test:e2e": "tsx scripts/e2e-check.ts",
-    "test:web": "pnpm run build && playwright test"
+    "test:web": "pnpm run build && playwright test",
+    "record:demo": "pnpm run build && PW_VIDEO=1 playwright test"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",

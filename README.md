@@ -179,6 +179,8 @@ generated state.
 | `npm run test:e2e`      | Smoke + read-back check against the deployed contract.         |
 | `pnpm dev`              | Start the local Next.js product UI.                             |
 | `pnpm build`            | Typecheck and production-build the product UI.                  |
+| `pnpm run test:web`     | Chromium CSP, browser crypto, and plaintext-sentinel checks.    |
+| `pnpm run record:demo`  | Capture local browser demo recordings after a passing build.    |
 | `npm run clean`         | Remove `contracts/managed/`, `.midnight-state.json`, and `.midnight-wallet-state/`. |
 | `npm run proof-server:start` / `:stop` | Compose lifecycle for just the proof-server service. |
 

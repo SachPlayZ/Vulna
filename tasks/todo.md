@@ -45,7 +45,7 @@
   - [ ] Record public Preprod transaction references after successful deployment.
 - [x] Documentation — rewrite README for the implemented Vulna MVP and verified Preview deployment.
 - [ ] Submission readiness — add GitHub Actions CI, deploy the web UI with Vercel CLI, and produce screenshot-ready test output.
-  - [x] Add CI workflow for install, typecheck, protocol tests, and production build.
+  - [x] Add CI workflow for dependency install and clean-checkout privacy regression tests.
   - [x] Deploy the web UI: `https://midnight-demo-app.vercel.app`.
   - [x] Run full test suite for submission screenshot (25 passing tests).
 - [ ] Commit each completed phase; push each commit once Git remote exists.

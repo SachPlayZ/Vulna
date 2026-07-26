@@ -145,6 +145,7 @@ and faucet URLs are defined in [`src/network.ts`](src/network.ts).
 
 ```bash
 pnpm test                 # 23 protocol/UI tests + 2 Compact simulator tests
+pnpm run test:ci          # 21 clean-checkout protocol/privacy regression tests
 pnpm run typecheck
 pnpm run build
 pnpm run test:web         # Chromium CSP + plaintext-sentinel checks
@@ -156,6 +157,10 @@ Browser checks fail if the sentinel appears in rendered public HTML, request
 bodies, localStorage, sessionStorage, cookies, or IndexedDB. The private
 report remains allowed only in the editor's transient memory and an authorized
 reviewer's transient decrypted view during the test.
+
+GitHub Actions runs `pnpm run test:ci` on every push and pull request. It
+excludes the generated Compact bindings, which are intentionally created by
+`pnpm run compile` rather than committed.
 
 ## Contract lifecycle
 
@@ -187,6 +192,7 @@ public ledger inventory and transition guards.
 | `pnpm run check-balance [-- --network <network>]` | Print the active test wallet's public address and tNIGHT/DUST balances. |
 | `pnpm run network [network]` | Show or set `undeployed`, `preview`, or `preprod`. |
 | `pnpm run test` | Protocol, crypto, storage, UI-preparation, and Compact simulator tests. |
+| `pnpm run test:ci` | Clean-checkout protocol/privacy regression suite used by GitHub Actions. |
 | `pnpm run test:web` | Build and run Chromium security/privacy checks. |
 | `pnpm run record:demo` | Record ignored local browser evidence videos. |
 | `pnpm run clean` | Remove generated contract and local wallet/network state. |

@@ -22,6 +22,7 @@
     "clean": "rm -rf contracts/managed .midnight-state.json .midnight-wallet-state",
     "test": "pnpm run test:protocol && pnpm run test:contract",
     "test:protocol": "tsx --test src/*.test.ts src/protocol/*.test.ts src/crypto/*.test.ts src/storage/*.test.ts src/web/*.test.ts",
+    "test:ci": "tsx --test src/protocol/*.test.ts src/crypto/*.test.ts src/storage/*.test.ts src/web/*.test.ts",
     "test:contract": "pnpm run compile && node --test scripts/contract-simulator.test.mjs",
     "test:integration": "pnpm run compile && pnpm run deploy",
     "test:settlement-spike": "tsx scripts/token-transfer-spike.ts",

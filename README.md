@@ -2,10 +2,20 @@
 
 **Private vulnerability disclosure, with public proof of process.**
 
+[![CI](https://github.com/SachPlayZ/Vulna/actions/workflows/ci.yml/badge.svg)](https://github.com/SachPlayZ/Vulna/actions/workflows/ci.yml)
+[Live demo](https://midnight-demo-app.vercel.app)
+
 Vulna is a Midnight Network MVP for vulnerability disclosure and bug-bounty
 workflows. Researchers encrypt reports in the browser, commit only safe
 integrity references to Midnight, and give an authorized reviewer a verifiable
 local decryption path.
+
+## Live demo
+
+Open [midnight-demo-app.vercel.app](https://midnight-demo-app.vercel.app) for
+the hosted Acme Notes fictional-demo UI. It serves the same restrictive CSP as
+local production builds; live proof-backed lifecycle verification remains on
+the Midnight Preview deployment documented below.
 
 > [!WARNING]
 > Vulna's current settlement is a **transparent, non-atomic NIGHT transfer**

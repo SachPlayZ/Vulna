@@ -44,6 +44,10 @@
   - [ ] Deploy to Preprod with a funded user-controlled test wallet.
   - [ ] Record public Preprod transaction references after successful deployment.
 - [x] Documentation — rewrite README for the implemented Vulna MVP and verified Preview deployment.
+- [ ] Submission readiness — add GitHub Actions CI, deploy the web UI with Vercel CLI, and produce screenshot-ready test output.
+  - [x] Add CI workflow for install, typecheck, protocol tests, and production build.
+  - [x] Deploy the web UI: `https://midnight-demo-app.vercel.app`.
+  - [x] Run full test suite for submission screenshot (25 passing tests).
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -84,6 +88,7 @@
 - Added the fictional-demo runbook, browser privacy-evidence instructions, and exact Preprod funding/deployment handoff.
 - Enabled the proof-backed receipt-settlement lifecycle on public Preview/Preprod when a local private-state password is explicitly supplied; verified the harmless lifecycle on Preview.
 - Rewrote the README around the implemented privacy boundary, active scripts, Preview contract, verified explorer link, explicit observer-visibility table, and MVP limitations.
+- Added GitHub Actions verification and deployed the public fictional-demo UI with Vercel.
 
 ### Verified
 
@@ -100,6 +105,7 @@
 - Phase 8: `pnpm run test:web` (2 Chromium browser tests), `pnpm test`, `pnpm run build`, `pnpm run test:e2e`, and `git diff --check` pass. Browser coverage confirms no sentinel in requests, public HTML, localStorage, sessionStorage, cookies, or ciphertext staged in IndexedDB.
 - Phase 9 Preview evidence: `PRIVATE_STATE_PASSWORD=<Keychain secret> pnpm run setup -- --network preview` confirmed `PAID`; `pnpm run test:e2e` confirmed public indexer state for `2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`.
 - README refresh: `pnpm run test:e2e`, Preview explorer HTTP 200, and `git diff --check` pass.
+- Submission readiness: Vercel production URL returned HTTP 200 with CSP; local `pnpm test` passed 23 protocol/privacy and 2 Compact simulator tests.
 
 ### Risks
 

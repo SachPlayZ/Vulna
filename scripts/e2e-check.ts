@@ -20,19 +20,21 @@ function isHexAddress(value: unknown): value is string {
 }
 
 async function main() {
+  const configuredAddress = process.env.VULNA_E2E_CONTRACT_ADDRESS?.trim();
   const deployment = getDeployment(network);
-  if (!deployment) fail(`No Vulna deployment recorded for network ${network}.`);
-  if (!isHexAddress(deployment.address)) fail('Recorded Vulna deployment address is invalid.');
+  const address = configuredAddress || (network === 'undeployed' ? deployment?.address : undefined);
+  if (!address) fail('Set VULNA_E2E_CONTRACT_ADDRESS to the completed lifecycle fixture on Preview or Preprod.');
+  if (!isHexAddress(address)) fail('Configured contract address is invalid.');
 
   const publicDataProvider = indexerPublicDataProvider(networkConfig.indexer, networkConfig.indexerWS);
-  const onChainState = await publicDataProvider.queryContractState(deployment.address);
-  if (!onChainState) fail(`Indexer returned no contract state for ${deployment.address}.`);
+  const onChainState = await publicDataProvider.queryContractState(address);
+  if (!onChainState) fail(`Indexer returned no contract state for ${address}.`);
   const publicLedger = ledger(onChainState.data);
   if (publicLedger.bountyCount < 1n || publicLedger.submissionCount < 1n) fail('Indexed Vulna fixture is incomplete.');
   if (publicLedger.submissions.lookup(1n).status !== SubmissionStatus.PAID) fail('Indexed submission settlement is not acknowledged.');
 
   console.log('✅ Vulna indexer confirmation passed');
-  console.log(`   contractAddress: ${deployment.address}`);
+  console.log(`   contractAddress: ${address}`);
   console.log(`   network:         ${network}`);
 }
 

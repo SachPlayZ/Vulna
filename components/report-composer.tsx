@@ -10,6 +10,7 @@ import { uploadOpaqueEnvelope } from '../src/storage/opaque-envelope';
 import { grantReviewerAccess, initializeResearcherWitnessState, listIndexedBounties, saveDisclosureWitnessState, submitDisclosure, type IndexedBounty } from '../src/web/browser-vulna';
 import { prepareLocalDisclosure, reportDraftFormSchema, type ReportDraftForm } from '../src/web/report-draft';
 import { useWallet } from './wallet/wallet-provider';
+import { configuredVulnaV2ContractAddress } from '../src/web/vulna-v2-config';
 
 type Stage = 'draft' | 'encrypted' | 'staged' | 'committed' | 'confirmed';
 
@@ -29,7 +30,7 @@ export function ReportComposer() {
   const [stage, setStage] = useState<Stage>('draft');
   const [notice, setNotice] = useState('Draft remains only in this tab.');
   const [references, setReferences] = useState<Readonly<{ artifactHash: string; envelopeHash: string }> | null>(null);
-  const [contractAddress, setContractAddress] = useState('');
+  const [contractAddress, setContractAddress] = useState(configuredVulnaV2ContractAddress);
   const [bounties, setBounties] = useState<ReadonlyArray<IndexedBounty>>([]);
   const [selectedBounty, setSelectedBounty] = useState('');
 

@@ -61,12 +61,19 @@
   - [x] Keep report submission fail-closed until an open bounty and browser ZK bundle are available.
 - [ ] Browser transaction flow — let owner wallets open a bounty and researcher wallets submit proof-backed disclosures.
   - [ ] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
-  - [ ] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
+  - [x] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
   - [x] Add an untrusted Vercel Blob relay for canonical encrypted report envelopes; browser encrypts before upload and reviewer verifies hashes before decrypting.
   - [x] Serve generated ZK assets and construct browser providers from the connected wallet configuration.
   - [x] Persist account-scoped witness state only as encrypted IndexedDB data derived from wallet authorization.
   - [x] Implement owner create/open bounty and researcher submit/access flows with indexer confirmation.
   - [ ] Add live Preview proof-transaction and plaintext-sentinel tests for the V2 flow.
+- [x] Preview V2 deployment — deploy the current V2 ABI with the existing generated Preview test wallet and configure the confirmed public address for the hosted frontend.
+  - Privacy boundary: only the public contract address becomes Vercel configuration; no seed, private state password, report, witness, or reviewer key leaves the local deployment environment.
+  - Contract invariants: deploy only; do not create a bounty, submit a disclosure, or mutate settlement state.
+  - [x] Add a typed deploy-only script using the current generated ABI and existing Preview wallet state.
+  - [x] Verify indexed V2 ledger state and record the public address: `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`.
+  - [x] Add the address to production/Preview Vercel configuration and redeploy the frontend.
+  - [x] Verify the live app exposes the configured Preview V2 address without exposing secrets.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -88,6 +95,7 @@
 - [x] Visual refresh: run build, web tests, light/dark responsive inspection, and privacy-output review.
 - [x] Wallet connection: run connector unit/browser coverage, build, privacy regression, and public-state review.
 - [ ] Browser transaction flow: run V2 contract simulator, ciphertext-relay tests, browser wallet mocks, indexer confirmation, and privacy-output review.
+- [x] Preview V2 deployment: compile, typecheck, deploy-only indexer confirmation, live config check, and diff/privacy review.
 
 ## Review
 
@@ -117,6 +125,7 @@
 - Added a public Vercel Blob relay for immutable, content-addressed encrypted report envelopes. The browser-side upload helper verifies returned bytes before use; the server route only issues path-constrained short-lived upload tokens and never accepts report bytes.
 - Updated the pending V2 Compact ABI so each bounty binds an immutable reviewer Curve25519 public key and key version; renamed `fundBounty` to `openBounty` to avoid a false custody claim.
 - Added browser-served V2 ZK assets, a DApp Connector proof/balance/submit bridge, encrypted account-and-contract-scoped witness state, owner deploy/create/open controls, and researcher commit/grant-access controls. UI success waits for indexed state; it never relies on a fabricated connector transaction ID.
+- Added a Preview-only V2 deploy command that uses the existing generated test wallet, retains its owner witness state only in encrypted local private state, and never creates a bounty, report, or settlement record. The public V2 address is configured in Vercel; researcher and bounty-read views prefill it.
 
 ### Verified
 
@@ -140,6 +149,7 @@
 - Visual refresh deployment: Vercel production deployment `dpl_3SjXixEjyf6MDrh9qeaZmjGXimNX` is ready; the canonical live demo renders the updated hero, generated assets, and Preview Midnight label.
 - Wallet connection: `pnpm run test:web` passed 5 Chromium checks, including Preview connection and wrong-network rejection; `pnpm run test:ci` passed 23 protocol/privacy checks; production build and diff checks passed. Desktop researcher wallet state was inspected locally.
 - Blob relay/V2 ABI: `pnpm run test:protocol` passed 26 tests, `pnpm run typecheck` passed, Compact V2 compiled, and the production upload route returned `405` to an unsupported `HEAD` request with the expected exact Blob CSP origin.
+- Preview V2 deployment: `pnpm run typecheck`, `pnpm run compile`, `pnpm run test:protocol` (27 tests), production build, and diff checks passed. `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495` indexed on Preview. Vercel production deployment `dpl_2HdT1WEB7R99xftHi46jgVgmKjK4` is ready; its canonical alias renders the address and serves V2 ZK assets with CSP.
 
 ### Risks
 
@@ -154,6 +164,7 @@
 - A connected wallet cannot submit a new disclosure yet: the confirmed Preview demo bounty is already `PAID`, and browser-served Vulna ZK assets plus an open bounty must exist before a proof-backed call can be safely enabled. The UI intentionally sends no fabricated transaction.
 - The public Blob relay is ciphertext-only but not an authenticated anti-abuse service yet; its short-lived tokens are path/content/size constrained. Add wallet-signature verification and rate limiting before high-volume production use.
 - V2 browser actions compile and pass mocked/privacy coverage, but a real Preview wallet must approve the deploy and proof calls. The connector cannot be driven from this environment, so live V2 transaction evidence remains user-controlled.
+- V2 is deployed but intentionally contains no bounty. The encrypted operator owner state is not available to arbitrary connected wallets; reviewer enrollment and a matching operator-authorized bounty creation path are still required before a researcher can submit a live disclosure.
 
 ### Follow-ups
 

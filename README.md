@@ -47,7 +47,8 @@ Preview.
 
 | Network | Contract ID | Explorer |
 | --- | --- | --- |
-| Preview | [`2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`](https://preview.midnightexplorer.com/contracts/2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75) | [Open in Midnight Explorer](https://preview.midnightexplorer.com/contracts/2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75) |
+| Preview V2 | [`02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`](https://preview.midnightexplorer.com/contracts/02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495) | [Open in Midnight Explorer](https://preview.midnightexplorer.com/contracts/02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495) |
+| Preview V1 lifecycle fixture | [`2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75`](https://preview.midnightexplorer.com/contracts/2384e08752408e12632a56f93487ee6ff417aa0ca47ec6d6fd16b24ec6d4ae75) | `PAID`; retained only as lifecycle evidence |
 
 The external explorer is a public, community-built service; the app's own
 verification uses the configured Midnight indexer. Preprod is not deployed yet.
@@ -85,9 +86,9 @@ Encrypted report envelopes use a public, immutable Vercel Blob relay. An observe
 
 ## Preview wallet flow
 
-The hosted dApp now serves the V2 proving assets directly to a connected Preview wallet. On **Bounties**, an owner deploys V2, creates a draft bounty using the reviewer’s public role commitment and X25519 key, then opens it in a second transaction. On **Researcher**, a researcher loads that V2 contract, encrypts locally to the on-chain reviewer key, uploads only the opaque envelope, submits the disclosure proof, waits for indexer confirmation, and grants reviewer access in a second proof transaction. The browser stores only encrypted account-scoped witness state; it never fabricates a transaction ID or success state.
+The hosted dApp is wired to the indexed Preview V2 contract above. It serves its proving assets directly to connected Preview wallets. The V2 deployment uses the project’s generated Preview operator wallet; its owner witness state is retained only in encrypted local private state. The frontend receives only the public address. Researchers use their own wallets to encrypt locally to an on-chain reviewer key, upload only the opaque envelope, submit the disclosure proof, wait for indexer confirmation, then grant reviewer access in a second proof transaction. The browser never fabricates a transaction ID or success state.
 
-The previous Preview V1 deployment is already `PAID` and cannot accept new reports. Deploy a fresh V2 contract from the connected wallet before using this flow.
+V2 is deployed but has no bounty yet. The prior V1 lifecycle fixture is `PAID` and cannot accept reports. An operator-authorized bounty creation flow and reviewer enrollment remain required before a live research submission.
 
 The separate NIGHT transfer used for settlement is transparent. A network
 observer may see and correlate that transfer outside Vulna's contract, so the

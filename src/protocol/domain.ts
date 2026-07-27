@@ -4,6 +4,8 @@ export const VULNA_SCHEMA = {
   encryptedReport: 'vulna.encrypted-report.v1',
   privateState: 'vulna.private-state.v1',
   reviewerKeyState: 'vulna.reviewer-key-state.v1',
+  reviewerEnrollmentState: 'vulna.reviewer-enrollment-state.v1',
+  reviewerEnrollmentPublic: 'vulna.reviewer-enrollment-public.v1',
   settlementReceipt: 'vulna.settlement-receipt.v1',
   publicMetadata: 'vulna.public-metadata.v1',
 } as const;

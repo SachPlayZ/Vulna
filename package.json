@@ -16,6 +16,7 @@
     "setup": "npx tsx src/setup.ts",
     "deploy": "npx tsx scripts/phase6-settlement-flow.ts",
     "deploy:v2:preview": "npx tsx scripts/deploy-v2-preview.ts",
+    "create:bounty:v2:preview": "npx tsx scripts/create-v2-preview-bounty.ts",
     "cli": "npx tsx src/cli.ts",
     "check-balance": "npx tsx src/check-balance.ts",
     "network": "npx tsx src/network.ts",

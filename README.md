@@ -90,6 +90,14 @@ The hosted dApp is wired to the indexed Preview V2 contract above. It serves its
 
 V2 is deployed but has no bounty yet. The prior V1 lifecycle fixture is `PAID` and cannot accept reports. An operator-authorized bounty creation flow and reviewer enrollment remain required before a live research submission.
 
+### Open the first V2 bounty
+
+1. On `/reviewer`, connect the intended reviewer’s Preview wallet and choose **Create or restore reviewer enrollment**.
+2. Copy the displayed public JSON bundle. It contains only a reviewer role commitment, Curve25519 public key, and key version—never a private key or role secret.
+3. Give that public bundle to the V2 operator. The operator runs `pnpm run create:bounty:v2:preview` with `VULNA_REVIEWER_ENROLLMENT` set to the copied JSON, plus its locally held encrypted owner state. The command creates a DRAFT then opens it only after indexer confirmation.
+
+The reviewer must retain the same browser’s encrypted enrollment state; deleting browser data loses its ability to decrypt future reports for that key.
+
 The separate NIGHT transfer used for settlement is transparent. A network
 observer may see and correlate that transfer outside Vulna's contract, so the
 receipt hash must not be interpreted as shielded payment or payment privacy.

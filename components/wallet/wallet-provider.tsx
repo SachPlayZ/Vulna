@@ -77,22 +77,21 @@ export function WalletProvider({ children }: Readonly<{ children: ReactNode }>) 
     setError(null);
     try {
       const connectedApi = await wallet.connect(VULNA_NETWORK_ID);
-      await connectedApi.hintUsage(['getConfiguration', 'getConnectionStatus', 'getUnshieldedAddress']);
-      const [nextConfiguration, connectionStatus, unshieldedAddress] = await Promise.all([
+      await connectedApi.hintUsage(['getConfiguration', 'getUnshieldedAddress']).catch(() => undefined);
+      const [nextConfiguration, unshieldedAddress] = await Promise.all([
         connectedApi.getConfiguration(),
-        connectedApi.getConnectionStatus(),
         connectedApi.getUnshieldedAddress(),
       ]);
-      if (connectionStatus.status !== 'connected' || connectionStatus.networkId !== VULNA_NETWORK_ID || nextConfiguration.networkId !== VULNA_NETWORK_ID) {
+      if (nextConfiguration.networkId !== VULNA_NETWORK_ID) {
         throw new Error('Unexpected wallet network.');
       }
       setApi(connectedApi);
       setConfiguration(nextConfiguration);
       setAddress(unshieldedAddress.unshieldedAddress);
       setConnectedWallet(descriptor);
-    } catch {
+    } catch (error) {
       disconnect();
-      setError(walletErrorMessage());
+      setError(walletErrorMessage(error));
     } finally {
       connecting.current = false;
       setIsConnecting(false);
@@ -104,13 +103,12 @@ export function WalletProvider({ children }: Readonly<{ children: ReactNode }>) 
     let active = true;
     const verifyConnection = async () => {
       try {
-        const [connectionStatus, nextConfiguration, nextAddress] = await Promise.all([
-          api.getConnectionStatus(),
+        const [nextConfiguration, nextAddress] = await Promise.all([
           api.getConfiguration(),
           api.getUnshieldedAddress(),
         ]);
         if (!active) return;
-        if (connectionStatus.status !== 'connected' || connectionStatus.networkId !== VULNA_NETWORK_ID || nextConfiguration.networkId !== VULNA_NETWORK_ID) {
+        if (nextConfiguration.networkId !== VULNA_NETWORK_ID) {
           disconnect();
           setError('Wallet disconnected or changed networks. Reconnect on Preview Midnight to continue.');
           return;

@@ -91,6 +91,29 @@ test('wallet connector authorizes only a Preview wallet and exposes a public add
   await expect(page.getByText('Example Wallet mn_addr_pr…uvwxyz')).toBeVisible();
 });
 
+test('wallet connector tolerates unsupported optional wallet hints and status checks', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.midnight = {
+      'partial-wallet-id': {
+        name: 'Partial Wallet',
+        rdns: 'example.wallet',
+        icon: '',
+        apiVersion: '4.0.1',
+        connect: async () => ({
+          hintUsage: async () => { throw new Error('hint method unavailable'); },
+          getConfiguration: async () => ({ networkId: 'preview', indexerUri: 'https://example.invalid/graphql', indexerWsUri: 'wss://example.invalid/graphql', substrateNodeUri: 'wss://example.invalid' }),
+          getConnectionStatus: async () => { throw new Error('status method unavailable'); },
+          getUnshieldedAddress: async () => ({ unshieldedAddress: 'mn_addr_preview1partialwalletabcdefghijklmnopqrstuvwxyz' }),
+        }),
+      },
+    };
+  });
+  await page.goto('/reviewer');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await expect(page.getByRole('button', { name: 'Disconnect' })).toBeVisible();
+  await expect(page.getByText('Partial Wallet mn_addr_pr…uvwxyz')).toBeVisible();
+});
+
 test('wallet connector fails closed when a wallet reports the wrong network', async ({ page }) => {
   await page.addInitScript(() => {
     window.midnight = {
@@ -110,6 +133,6 @@ test('wallet connector fails closed when a wallet reports the wrong network', as
   });
   await page.goto('/researcher');
   await page.getByRole('button', { name: 'Connect wallet' }).click();
-  await expect(page.locator('.wallet-error')).toContainText('Unlock your wallet, select Preview Midnight');
+  await expect(page.locator('.wallet-error')).toContainText('Wallet is on the wrong network. Select Preview Midnight');
   await expect(page.getByRole('button', { name: 'Disconnect' })).not.toBeVisible();
 });

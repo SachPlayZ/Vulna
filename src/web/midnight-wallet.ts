@@ -25,6 +25,13 @@ export function maskAddress(address: string): string {
   return `${address.slice(0, 10)}…${address.slice(-6)}`;
 }
 
-export function walletErrorMessage(): string {
+export function walletErrorMessage(error?: unknown): string {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  if (message.includes('network') || message.includes('preview')) {
+    return 'Wallet is on the wrong network. Select Preview Midnight, then reconnect.';
+  }
+  if (message.includes('denied') || message.includes('rejected') || message.includes('authorized')) {
+    return 'Wallet authorization was not completed. Approve Vulna in the wallet, then reconnect.';
+  }
   return 'Wallet connection failed. Unlock your wallet, select Preview Midnight, then try again.';
 }

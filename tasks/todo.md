@@ -81,6 +81,11 @@
   - [x] Add connected-wallet reviewer enrollment UI with public-bundle copy only.
   - [x] Add a typed Preview operator script that validates a public bundle and creates/opens one bounty.
   - [ ] Deploy the enrollment UI and create/index one V2 Open bounty using an explicit public bundle.
+- [ ] Wallet connection recovery — accept an authorized Preview connector when optional capability hints are unsupported, retain safe diagnostics, and verify the reviewer enrollment path.
+  - Privacy boundary: diagnostics contain only sanitized wallet/network codes; no wallet API object, account secret, signature, or report data is logged.
+  - [x] Inspect installed connector types and the failing connection path.
+  - [x] Make optional wallet capability hints non-blocking and add regression coverage.
+  - [ ] Deploy and verify Preview connection from the live reviewer route.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
 ## Verification
@@ -135,6 +140,7 @@
 - Added browser-served V2 ZK assets, a DApp Connector proof/balance/submit bridge, encrypted account-and-contract-scoped witness state, owner deploy/create/open controls, and researcher commit/grant-access controls. UI success waits for indexed state; it never relies on a fabricated connector transaction ID.
 - Added a Preview-only V2 deploy command that uses the existing generated test wallet, retains its owner witness state only in encrypted local private state, and never creates a bounty, report, or settlement record. The public V2 address is configured in Vercel; researcher and bounty-read views prefill it.
 - Added encrypted account-scoped reviewer enrollment with a Curve25519 key pair and reviewer role secret, plus a public-only copy bundle. The operator bounty command accepts that strict public bundle and performs only `createBounty` then `openBounty` using the retained V2 owner state.
+- Made optional DApp Connector capability hints non-blocking and removed the unsupported status call from connection health checks. The connector now validates Preview using required configuration plus public address only.
 
 ### Verified
 
@@ -160,6 +166,7 @@
 - Blob relay/V2 ABI: `pnpm run test:protocol` passed 26 tests, `pnpm run typecheck` passed, Compact V2 compiled, and the production upload route returned `405` to an unsupported `HEAD` request with the expected exact Blob CSP origin.
 - Preview V2 deployment: `pnpm run typecheck`, `pnpm run compile`, `pnpm run test:protocol` (27 tests), production build, and diff checks passed. `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495` indexed on Preview. Vercel production deployment `dpl_2HdT1WEB7R99xftHi46jgVgmKjK4` is ready; its canonical alias renders the address and serves V2 ZK assets with CSP.
 - Reviewer enrollment: `pnpm run typecheck`, Compact compile, `pnpm run test:protocol` (29 tests), production build, and browser regression passed. Vercel production deployment `dpl_J5VeaYTFWzqo97rHTya3bwnz2jx3` is ready; its reviewer route renders enrollment with no public plaintext sentinel.
+- Wallet recovery: `pnpm run typecheck` and 6 Chromium browser checks passed, including a Preview wallet that rejects optional hints/status calls. Vercel production deployment `dpl_Bu7c6TuL8SGZMMmJaTBerwAk1WGM` is ready.
 
 ### Risks
 

@@ -91,7 +91,7 @@ test('wallet connector authorizes only a Preview wallet and exposes a public add
   await expect(page.getByText('Example Wallet mn_addr_pr…uvwxyz')).toBeVisible();
 });
 
-test('wallet connector tolerates unsupported optional wallet hints and status checks', async ({ page }) => {
+test('wallet connector does not require optional wallet hints or status checks', async ({ page }) => {
   await page.addInitScript(() => {
     window.midnight = {
       'partial-wallet-id': {

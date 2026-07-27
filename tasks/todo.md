@@ -167,6 +167,7 @@
 - Preview V2 deployment: `pnpm run typecheck`, `pnpm run compile`, `pnpm run test:protocol` (27 tests), production build, and diff checks passed. `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495` indexed on Preview. Vercel production deployment `dpl_2HdT1WEB7R99xftHi46jgVgmKjK4` is ready; its canonical alias renders the address and serves V2 ZK assets with CSP.
 - Reviewer enrollment: `pnpm run typecheck`, Compact compile, `pnpm run test:protocol` (29 tests), production build, and browser regression passed. Vercel production deployment `dpl_J5VeaYTFWzqo97rHTya3bwnz2jx3` is ready; its reviewer route renders enrollment with no public plaintext sentinel.
 - Wallet recovery: `pnpm run typecheck` and 6 Chromium browser checks passed, including a Preview wallet that rejects optional hints/status calls. Vercel production deployment `dpl_Bu7c6TuL8SGZMMmJaTBerwAk1WGM` is ready.
+- Wallet recovery follow-up: the connector no longer invokes `hintUsage` at all during connection. Typecheck and all 6 browser checks passed; Vercel production deployment `dpl_J2GioNVJjwB7bMYh7cV8uBhXDPKx` is ready.
 
 ### Risks
 

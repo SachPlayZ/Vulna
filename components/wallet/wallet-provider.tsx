@@ -75,23 +75,23 @@ export function WalletProvider({ children }: Readonly<{ children: ReactNode }>) 
     connecting.current = true;
     setIsConnecting(true);
     setError(null);
+    let step: 'connect' | 'configuration' | 'address' = 'connect';
     try {
       const connectedApi = await wallet.connect(VULNA_NETWORK_ID);
-      await connectedApi.hintUsage(['getConfiguration', 'getUnshieldedAddress']).catch(() => undefined);
-      const [nextConfiguration, unshieldedAddress] = await Promise.all([
-        connectedApi.getConfiguration(),
-        connectedApi.getUnshieldedAddress(),
-      ]);
+      step = 'configuration';
+      const nextConfiguration = await connectedApi.getConfiguration();
       if (nextConfiguration.networkId !== VULNA_NETWORK_ID) {
         throw new Error('Unexpected wallet network.');
       }
+      step = 'address';
+      const unshieldedAddress = await connectedApi.getUnshieldedAddress();
       setApi(connectedApi);
       setConfiguration(nextConfiguration);
       setAddress(unshieldedAddress.unshieldedAddress);
       setConnectedWallet(descriptor);
     } catch (error) {
       disconnect();
-      setError(walletErrorMessage(error));
+      setError(walletErrorMessage(error, step));
     } finally {
       connecting.current = false;
       setIsConnecting(false);

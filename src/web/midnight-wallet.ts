@@ -25,13 +25,21 @@ export function maskAddress(address: string): string {
   return `${address.slice(0, 10)}…${address.slice(-6)}`;
 }
 
-export function walletErrorMessage(error?: unknown): string {
+export type WalletConnectionStep = 'connect' | 'configuration' | 'address';
+
+export function walletErrorMessage(error?: unknown, step?: WalletConnectionStep): string {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
   if (message.includes('network') || message.includes('preview')) {
     return 'Wallet is on the wrong network. Select Preview Midnight, then reconnect.';
   }
   if (message.includes('denied') || message.includes('rejected') || message.includes('authorized')) {
     return 'Wallet authorization was not completed. Approve Vulna in the wallet, then reconnect.';
+  }
+  if (step === 'configuration') {
+    return 'Wallet connected but did not expose its Preview configuration. Disconnect Vulna in the wallet, reconnect, then try again.';
+  }
+  if (step === 'address') {
+    return 'Wallet connected but did not expose an unshielded Preview address. Unlock the selected account, then reconnect.';
   }
   return 'Wallet connection failed. Unlock your wallet, select Preview Midnight, then try again.';
 }

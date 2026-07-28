@@ -91,9 +91,9 @@
   - [ ] Deploy and verify Preview connection from the live reviewer route.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
-- [ ] Git deployment reliability — generate Compact assets during the production build so a clean Vercel Git checkout does not depend on ignored local files.
+- [x] Git deployment reliability — generate Compact assets during the production build so a clean Vercel Git checkout does not depend on ignored local files.
   - Privacy boundary: build-only generation; no wallet state, report data, or secrets enter the artifact.
-  - [ ] Compile before copying ZK assets, add a reusable pre-push verification command, and exercise the build from a fresh clone.
+  - [x] Compile before copying ZK assets, add a reusable pre-push verification command, and exercise the build from a fresh clone.
 
 ## Verification
 
@@ -103,7 +103,7 @@
 - [x] Phase 0: real `storeMessage` transaction + indexed state read.
 - [x] Phase 1: protocol unit tests, strict typecheck, Compact compile, privacy-output review.
 - [ ] Per phase: narrow tests, affected checks, privacy-output review, diff review.
-  - [ ] Git deployment reliability: clean-checkout build, typecheck, protocol tests, browser suite, and Vercel Git deployment.
+  - [x] Git deployment reliability: clean-checkout build, typecheck, protocol tests, browser suite, and Vercel Git deployment.
 - [x] Phase 2: generated Compact lifecycle and negative authorization/replay simulator tests.
 - [x] Phase 3: XChaCha/Curve25519 round trip, Compact-compatible commitment verification, tamper/wrong-key/key-rotation tests, ciphertext storage, encrypted recovery, separate-process reviewer, and sentinel storage tests.
 - [x] Phase 4: generated witnesses, six-circuit state-machine simulator, live local deploy, encrypted fixture commitment submission, and indexed-state confirmation.
@@ -185,6 +185,7 @@
 - Researcher bounty picker: `pnpm run typecheck`, `pnpm run test:protocol` (29 tests), and `pnpm run test:web` (8 browser checks) passed. Browser coverage confirms automatic public reads do not call shielded-address or signature/private-state setup.
 - Researcher bounty picker deployment: Vercel production deployment `dpl_To2PBEeuHTgeKeDgr9eBierTsF3k` is ready and aliased to `https://vulna-midnight.vercel.app`.
 - Bounty picker repair: direct Preview indexer read confirmed V2 bounty `#1` is `OPEN`; `pnpm run typecheck`, `pnpm run test:protocol` (30 tests), and `pnpm run test:web` (8 browser checks) passed. Vercel deployment `dpl_7xQhfxYeFdFHEeJ72vDz5to9t9HA` is live; a signature-free browser wallet mock displayed bounty `#1` from the real Preview indexer.
+- Git deployment reliability: `pnpm run check:push` passed both locally and from a fresh clone, including generated Compact assets, typecheck, 30 protocol/privacy tests, and the production build. CI now compiles before testing/building.
 
 ### Risks
 

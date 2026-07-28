@@ -35,3 +35,6 @@ jobs:
 
       - name: Protocol and privacy tests
         run: pnpm run test:ci
+
+      - name: Clean-checkout production build
+        run: pnpm run build

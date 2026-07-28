@@ -91,6 +91,10 @@
   - [ ] Deploy and verify Preview connection from the live reviewer route.
 - [ ] Commit each completed phase; push each commit once Git remote exists.
 
+- [ ] Git deployment reliability — generate Compact assets during the production build so a clean Vercel Git checkout does not depend on ignored local files.
+  - Privacy boundary: build-only generation; no wallet state, report data, or secrets enter the artifact.
+  - [ ] Compile before copying ZK assets, add a reusable pre-push verification command, and exercise the build from a fresh clone.
+
 ## Verification
 
 - [x] Phase 0: `pnpm install --frozen-lockfile`.
@@ -99,6 +103,7 @@
 - [x] Phase 0: real `storeMessage` transaction + indexed state read.
 - [x] Phase 1: protocol unit tests, strict typecheck, Compact compile, privacy-output review.
 - [ ] Per phase: narrow tests, affected checks, privacy-output review, diff review.
+  - [ ] Git deployment reliability: clean-checkout build, typecheck, protocol tests, browser suite, and Vercel Git deployment.
 - [x] Phase 2: generated Compact lifecycle and negative authorization/replay simulator tests.
 - [x] Phase 3: XChaCha/Curve25519 round trip, Compact-compatible commitment verification, tamper/wrong-key/key-rotation tests, ciphertext storage, encrypted recovery, separate-process reviewer, and sentinel storage tests.
 - [x] Phase 4: generated witnesses, six-circuit state-machine simulator, live local deploy, encrypted fixture commitment submission, and indexed-state confirmation.

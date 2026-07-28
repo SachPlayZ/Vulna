@@ -29,3 +29,8 @@
 
 - Mistake: Tightened CSP without allowlisting the required Preview indexer transports.
 - Rule: When browser code reads Midnight public state, allowlist only its exact indexer HTTPS and WSS origins, then assert them in browser security tests.
+
+## Pattern
+
+- Mistake: Verified a Vercel CLI deployment that included ignored generated Compact assets, but not the Git checkout Vercel actually builds.
+- Rule: Before pushing deploy-affecting changes, run the clean-checkout build path and inspect the Git-triggered Vercel deployment; never rely on local generated assets.

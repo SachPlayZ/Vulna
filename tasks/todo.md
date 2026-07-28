@@ -93,7 +93,7 @@
 
 - [x] Git deployment reliability — generate Compact assets during the production build so a clean Vercel Git checkout does not depend on ignored local files.
   - Privacy boundary: build-only generation; no wallet state, report data, or secrets enter the artifact.
-  - [x] Compile before copying ZK assets, add a reusable pre-push verification command, and exercise the build from a fresh clone.
+  - [ ] Version generated contract bindings required by the web build, retain explicit local contract generation checks, add a reusable pre-push verification command, and exercise the build from a fresh clone.
 
 ## Verification
 

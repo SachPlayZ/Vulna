@@ -8,8 +8,8 @@
   "scripts": {
     "compile": "compact compile contracts/hello-world.compact contracts/managed/hello-world",
     "dev": "next dev",
-    "sync:zk": "mkdir -p public/contract/hello-world && cp -R contracts/managed/hello-world/keys contracts/managed/hello-world/zkir public/contract/hello-world/",
-    "build": "pnpm run compile && pnpm run sync:zk && next build --webpack",
+    "sync:zk": "if [ -d contracts/managed/hello-world/keys ]; then mkdir -p public/contract/hello-world && cp -R contracts/managed/hello-world/keys contracts/managed/hello-world/zkir public/contract/hello-world/; fi; test -d public/contract/hello-world/keys && test -d public/contract/hello-world/zkir",
+    "build": "pnpm run sync:zk && next build --webpack",
     "start": "next start",
     "typecheck": "npx tsc --noEmit",
     "build:protocol": "npx tsc --noEmit",
@@ -31,7 +31,8 @@
     "test:settlement-spike": "tsx scripts/token-transfer-spike.ts",
     "test:e2e": "tsx scripts/e2e-check.ts",
     "test:web": "NEXT_PUBLIC_VULNA_V2_CONTRACT_ADDRESS=02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495 pnpm run build && playwright test",
-    "check:push": "pnpm run compile && pnpm run typecheck && pnpm run test:protocol && pnpm run build && git diff --check",
+    "check:contract": "pnpm run compile && git diff --exit-code -- contracts/managed/hello-world/contract",
+    "check:push": "pnpm run typecheck && pnpm run test:protocol && pnpm run build && git diff --check",
     "record:demo": "pnpm run build && PW_VIDEO=1 playwright test"
   },
   "dependencies": {

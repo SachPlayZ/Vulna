@@ -33,9 +33,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Compact assets
-        run: pnpm run compile
-
       - name: Protocol and privacy tests
         run: pnpm run test:ci
 

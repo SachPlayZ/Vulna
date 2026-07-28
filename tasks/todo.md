@@ -60,7 +60,7 @@
   - [x] Expose the connected public address and wallet state in navigation and researcher flow.
   - [x] Keep report submission fail-closed until an open bounty and browser ZK bundle are available.
 - [ ] Browser transaction flow — let owner wallets open a bounty and researcher wallets submit proof-backed disclosures.
-  - [ ] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
+  - [x] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
   - [x] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
   - [x] Add an untrusted Vercel Blob relay for canonical encrypted report envelopes; browser encrypts before upload and reviewer verifies hashes before decrypting.
   - [x] Serve generated ZK assets and construct browser providers from the connected wallet configuration.
@@ -74,13 +74,13 @@
   - [x] Verify indexed V2 ledger state and record the public address: `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`.
   - [x] Add the address to production/Preview Vercel configuration and redeploy the frontend.
   - [x] Verify the live app exposes the configured Preview V2 address without exposing secrets.
-- [ ] Reviewer enrollment and V2 bounty creation — create reviewer role/key material locally, copy only its public bundle to the operator, then create and open a Preview bounty from the encrypted operator state.
+- [x] Reviewer enrollment and V2 bounty creation — create reviewer role/key material locally, copy only its public bundle to the operator, then create and open a Preview bounty from the encrypted operator state.
   - Privacy boundary: reviewer actor secret and Curve25519 private key remain encrypted in that reviewer browser; the operator receives only role commitment, public key, and key version.
   - Contract invariants: create with a positive policy reward and immutable reviewer key, then transition only DRAFT → OPEN through the recorded V2 owner state.
   - [x] Add versioned encrypted reviewer enrollment state and unit tests.
   - [x] Add connected-wallet reviewer enrollment UI with public-bundle copy only.
   - [x] Add a typed Preview operator script that validates a public bundle and creates/opens one bounty.
-  - [ ] Deploy the enrollment UI and create/index one V2 Open bounty using an explicit public bundle.
+  - [x] Deploy the enrollment UI and create/index one V2 Open bounty using an explicit public bundle: Preview V2 bounty `#1`.
 - [ ] Wallet connection recovery — accept an authorized Preview connector when optional capability hints are unsupported, retain safe diagnostics, and verify the reviewer enrollment path.
   - Privacy boundary: diagnostics contain only sanitized wallet/network codes; no wallet API object, account secret, signature, or report data is logged.
   - [x] Inspect installed connector types and the failing connection path.
@@ -108,7 +108,8 @@
 - [x] Wallet connection: run connector unit/browser coverage, build, privacy regression, and public-state review.
 - [ ] Browser transaction flow: run V2 contract simulator, ciphertext-relay tests, browser wallet mocks, indexer confirmation, and privacy-output review.
 - [x] Preview V2 deployment: compile, typecheck, deploy-only indexer confirmation, live config check, and diff/privacy review.
-- [ ] Reviewer enrollment and V2 bounty creation: crypto tests, typecheck, contract simulator, live operator transaction, frontend build, and privacy review.
+- [x] Reviewer enrollment and V2 bounty creation: crypto tests, typecheck, contract simulator, live operator transaction, frontend build, and privacy review.
+  - [x] Live Preview operator transaction created and indexer-confirmed V2 bounty `#1` as `OPEN`.
 
 ## Review
 
@@ -141,6 +142,7 @@
 - Added a Preview-only V2 deploy command that uses the existing generated test wallet, retains its owner witness state only in encrypted local private state, and never creates a bounty, report, or settlement record. The public V2 address is configured in Vercel; researcher and bounty-read views prefill it.
 - Added encrypted account-scoped reviewer enrollment with a Curve25519 key pair and reviewer role secret, plus a public-only copy bundle. The operator bounty command accepts that strict public bundle and performs only `createBounty` then `openBounty` using the retained V2 owner state.
 - Made optional DApp Connector capability hints non-blocking and removed the unsupported status call from connection health checks. The connector now validates Preview using required configuration plus public address only.
+- Created and opened Preview V2 bounty `#1` using a reviewer-supplied public enrollment bundle; no reviewer private material entered operator state or source control.
 
 ### Verified
 
@@ -168,6 +170,7 @@
 - Reviewer enrollment: `pnpm run typecheck`, Compact compile, `pnpm run test:protocol` (29 tests), production build, and browser regression passed. Vercel production deployment `dpl_J5VeaYTFWzqo97rHTya3bwnz2jx3` is ready; its reviewer route renders enrollment with no public plaintext sentinel.
 - Wallet recovery: `pnpm run typecheck` and 6 Chromium browser checks passed, including a Preview wallet that rejects optional hints/status calls. Vercel production deployment `dpl_Bu7c6TuL8SGZMMmJaTBerwAk1WGM` is ready.
 - Wallet recovery follow-up: the connector no longer invokes `hintUsage` at all during connection. Typecheck and all 6 browser checks passed; Vercel production deployment `dpl_J2GioNVJjwB7bMYh7cV8uBhXDPKx` is ready.
+- V2 bounty creation: `pnpm run create:bounty:v2:preview` completed with Preview contract `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`, bounty `#1`, and indexer-confirmed `OPEN` state.
 
 ### Risks
 
@@ -179,11 +182,11 @@
 - The CSP permits `wasm-unsafe-eval` for the installed Compact runtime only; it excludes third-party origins and ordinary `unsafe-eval`.
 - GitHub Actions runs the 21-test generated-binding-independent suite; the full Compact simulator suite remains a local/toolchain verification command.
 - Preprod deployment remains pending until a user-controlled Preprod wallet is funded. Preview confirmation is not a substitute.
-- A connected wallet cannot submit a new disclosure yet: the confirmed Preview demo bounty is already `PAID`, and browser-served Vulna ZK assets plus an open bounty must exist before a proof-backed call can be safely enabled. The UI intentionally sends no fabricated transaction.
+- The V1 Preview fixture is `PAID`; V2 bounty `#1` is `OPEN`. A real browser-wallet disclosure transaction against V2 remains unexercised, and the UI must keep success gated on indexer confirmation.
 - The public Blob relay is ciphertext-only but not an authenticated anti-abuse service yet; its short-lived tokens are path/content/size constrained. Add wallet-signature verification and rate limiting before high-volume production use.
 - V2 browser actions compile and pass mocked/privacy coverage, but a real Preview wallet must approve the deploy and proof calls. The connector cannot be driven from this environment, so live V2 transaction evidence remains user-controlled.
-- V2 is deployed but intentionally contains no bounty. The encrypted operator owner state is not available to arbitrary connected wallets; reviewer enrollment and a matching operator-authorized bounty creation path are still required before a researcher can submit a live disclosure.
-- A live V2 bounty cannot be created until a reviewer uses their own connected browser wallet to generate the public enrollment bundle. The operator must never invent or recover the reviewer private key/role secret.
+- The encrypted operator owner state is not available to arbitrary connected wallets. Preview V2 bounty `#1` is open, but a real browser-wallet disclosure transaction has not yet been exercised against it.
+- Additional V2 bounties require a reviewer-generated public enrollment bundle. The operator must never invent or recover the reviewer private key or role secret.
 
 ### Follow-ups
 

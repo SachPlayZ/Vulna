@@ -88,13 +88,13 @@ Encrypted report envelopes use a public, immutable Vercel Blob relay. An observe
 
 The hosted dApp is wired to the indexed Preview V2 contract above. It serves its proving assets directly to connected Preview wallets. The V2 deployment uses the project’s generated Preview operator wallet; its owner witness state is retained only in encrypted local private state. The frontend receives only the public address. Researchers use their own wallets to encrypt locally to an on-chain reviewer key, upload only the opaque envelope, submit the disclosure proof, wait for indexer confirmation, then grant reviewer access in a second proof transaction. The browser never fabricates a transaction ID or success state.
 
-V2 is deployed but has no bounty yet. The prior V1 lifecycle fixture is `PAID` and cannot accept reports. An operator-authorized bounty creation flow and reviewer enrollment remain required before a live research submission.
+V2 bounty `#1` is indexer-confirmed `OPEN` on the deployed Preview contract. It binds the enrolled reviewer's public role commitment and Curve25519 encryption key. The prior V1 lifecycle fixture is `PAID` and remains lifecycle evidence only.
 
-### Open the first V2 bounty
+### Open another V2 bounty
 
 1. On `/reviewer`, connect the intended reviewer’s Preview wallet and choose **Create or restore reviewer enrollment**.
 2. Copy the displayed public JSON bundle. It contains only a reviewer role commitment, Curve25519 public key, and key version—never a private key or role secret.
-3. Give that public bundle to the V2 operator. The operator runs `pnpm run create:bounty:v2:preview` with `VULNA_REVIEWER_ENROLLMENT` set to the copied JSON, plus its locally held encrypted owner state. The command creates a DRAFT then opens it only after indexer confirmation.
+3. Give that public bundle to the V2 operator. The operator runs `pnpm run create:bounty:v2:preview` with `VULNA_REVIEWER_ENROLLMENT` set to the copied JSON, plus its locally held encrypted owner state. The command creates a DRAFT then opens it only after indexer confirmation. Bounty `#1` was created this way on Preview.
 
 The reviewer must retain the same browser’s encrypted enrollment state; deleting browser data loses its ability to decrypt future reports for that key.
 

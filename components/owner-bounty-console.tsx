@@ -20,7 +20,7 @@ export function OwnerBountyConsole() {
     }
     try {
       setNotice('Reading indexed V2 bounty state…');
-      const next = await listIndexedBounties(api, address, configuredVulnaV2ContractAddress);
+      const next = await listIndexedBounties(api, configuredVulnaV2ContractAddress);
       setBounties(next);
       setNotice(next.length ? 'Indexed V2 bounties loaded.' : 'V2 is indexed; no bounties have been opened yet.');
     } catch {

@@ -30,7 +30,7 @@
     "test:integration": "pnpm run compile && pnpm run deploy",
     "test:settlement-spike": "tsx scripts/token-transfer-spike.ts",
     "test:e2e": "tsx scripts/e2e-check.ts",
-    "test:web": "pnpm run build && playwright test",
+    "test:web": "NEXT_PUBLIC_VULNA_V2_CONTRACT_ADDRESS=02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495 pnpm run build && playwright test",
     "record:demo": "pnpm run build && PW_VIDEO=1 playwright test"
   },
   "dependencies": {

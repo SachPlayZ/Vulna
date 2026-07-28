@@ -14,3 +14,8 @@
 
 - Mistake: Treated optional DApp Connector hints and status APIs as authorization prerequisites.
 - Rule: Connect with required configuration and public address only; make capability hints advisory and keep diagnostics sanitized.
+
+## Pattern
+
+- Mistake: Exposed a developer-facing contract lookup as the primary researcher flow.
+- Rule: Auto-load configured public contracts and show actionable bounty cards; keep raw address entry behind an advanced/debug affordance.

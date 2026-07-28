@@ -68,6 +68,13 @@ async function session(api: ConnectedAPI, accountId: string) {
   return { config, repository, zkConfigProvider, proofProvider, walletProvider, publicDataProvider: indexerPublicDataProvider(config.indexerUri, config.indexerWsUri) };
 }
 
+async function publicSession(api: ConnectedAPI) {
+  const config = await api.getConfiguration();
+  if (config.networkId !== 'preview') throw new BrowserTransactionError('Switch the wallet to Preview Midnight.');
+  setNetworkId(config.networkId);
+  return { publicDataProvider: indexerPublicDataProvider(config.indexerUri, config.indexerWsUri) };
+}
+
 async function submitTransaction(api: ConnectedAPI, unprovenTx: UnprovenTransaction, proofProvider: Awaited<ReturnType<typeof session>>['proofProvider'], walletProvider: WalletProvider): Promise<void> {
   const proven = await proofProvider.proveTx(unprovenTx);
   const balanced = await walletProvider.balanceTx(proven);
@@ -112,8 +119,8 @@ export async function saveDisclosureWitnessState(api: ConnectedAPI, accountId: s
   await current.repository.save(contractAddress, { ...state, ...values });
 }
 
-export async function listIndexedBounties(api: ConnectedAPI, accountId: string, contractAddress: string): Promise<ReadonlyArray<IndexedBounty>> {
-  const current = await session(api, accountId);
+export async function listIndexedBounties(api: ConnectedAPI, contractAddress: string): Promise<ReadonlyArray<IndexedBounty>> {
+  const current = await publicSession(api);
   const state = await current.publicDataProvider.queryContractState(contractAddress);
   if (!state) throw new BrowserTransactionError('Contract state is not indexed yet.');
   const ledger = Vulna.ledger(state.data);
@@ -149,7 +156,7 @@ async function callWithWitnessState(
 
 export async function openBounty(api: ConnectedAPI, accountId: string, contractAddress: string, bountyId: bigint): Promise<void> {
   await callWithWitnessState(api, accountId, contractAddress, { circuitId: 'openBounty', args: [bountyId] }, async () => {
-    const bounties = await listIndexedBounties(api, accountId, contractAddress);
+    const bounties = await listIndexedBounties(api, contractAddress);
     return bounties.some((bounty) => bounty.id === bountyId && bounty.status === Vulna.BountyStatus.OPEN);
   });
 }
@@ -163,11 +170,11 @@ export async function createBounty(api: ConnectedAPI, accountId: string, contrac
   scopeHash: Uint8Array;
   rewardAmount: bigint;
 }>): Promise<void> {
-  const before = (await listIndexedBounties(api, accountId, contractAddress)).length;
+  const before = (await listIndexedBounties(api, contractAddress)).length;
   await callWithWitnessState(api, accountId, contractAddress, {
     circuitId: 'createBounty',
     args: [input.reviewerRole, input.reviewerEncryptionPublicKey, input.reviewerKeyVersion, input.binding, input.metadataHash, input.scopeHash, input.rewardAmount],
-  }, async () => (await listIndexedBounties(api, accountId, contractAddress)).length > before);
+  }, async () => (await listIndexedBounties(api, contractAddress)).length > before);
 }
 
 export async function submitDisclosure(api: ConnectedAPI, accountId: string, contractAddress: string, args: [bigint, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array]): Promise<bigint> {

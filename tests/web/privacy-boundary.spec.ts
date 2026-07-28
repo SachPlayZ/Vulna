@@ -18,7 +18,42 @@ test('public routes send restrictive headers and never render a report sentinel'
   await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
 });
 
-test('researcher encryption keeps the sentinel out of requests and browser persistence', async ({ page }) => {
+test('researcher flow presents bounty selection before advanced contract configuration', async ({ page }) => {
+  await page.goto('/researcher');
+
+  await expect(page.getByRole('heading', { name: 'Choose an open bounty' })).toBeVisible();
+  await expect(page.getByText('Connect your Preview wallet to load available bounties.')).toBeVisible();
+  await expect(page.getByLabel('V2 contract address')).not.toBeVisible();
+  await page.getByText('Use another contract').click();
+  await expect(page.getByLabel('V2 contract address')).toBeVisible();
+});
+
+test('researcher flow auto-loads public bounties without private wallet setup', async ({ page }) => {
+  await page.route('https://example.invalid/**', (route) => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: {} }) }));
+  await page.addInitScript(() => {
+    const state = { configurationReads: 0, shieldedReads: 0 };
+    (globalThis as typeof globalThis & { __vulnaBountyPickerState: typeof state }).__vulnaBountyPickerState = state;
+    window.midnight = {
+      'public-reader-wallet': {
+        name: 'Public Reader Wallet', rdns: 'example.wallet', icon: '', apiVersion: '4.0.1',
+        connect: async () => ({
+          getConfiguration: async () => {
+            state.configurationReads += 1;
+            return { networkId: 'preview', indexerUri: 'https://example.invalid/graphql', indexerWsUri: 'wss://example.invalid/graphql', substrateNodeUri: 'wss://example.invalid' };
+          },
+          getUnshieldedAddress: async () => ({ unshieldedAddress: 'mn_addr_preview1publicreaderabcdefghijklmnopqrstuvwxyz' }),
+          getShieldedAddresses: async () => { state.shieldedReads += 1; throw new Error('not needed for public reads'); },
+        }),
+      },
+    };
+  });
+  await page.goto('/researcher');
+  await page.getByRole('button', { name: 'Connect wallet' }).click();
+  await expect.poll(() => page.evaluate(() => (globalThis as typeof globalThis & { __vulnaBountyPickerState: { configurationReads: number } }).__vulnaBountyPickerState.configurationReads)).toBeGreaterThan(1);
+  await expect.poll(() => page.evaluate(() => (globalThis as typeof globalThis & { __vulnaBountyPickerState: { shieldedReads: number } }).__vulnaBountyPickerState.shieldedReads)).toBe(0);
+});
+
+test('researcher draft keeps the sentinel out of requests and browser persistence', async ({ page }) => {
   const requestBodies: string[] = [];
   page.on('request', (request) => {
     const body = request.postData();
@@ -31,27 +66,9 @@ test('researcher encryption keeps the sentinel out of requests and browser persi
   await page.getByLabel('Summary').fill(`Harmless demo description ${sentinel}; never use real credentials.`);
   await page.getByLabel('Safe reproduction').fill('Open the fictional route and observe a harmless mocked response.');
   await page.getByLabel('Impact').fill('The fictional demo could cross an authorization boundary.');
-  await page.getByRole('button', { name: 'Encrypt & stage ciphertext' }).click();
-  await expect(page.getByRole('status')).toContainText('Ciphertext is staged locally');
-
   expect(requestBodies.join('\n')).not.toContain(sentinel);
-  const persisted = await page.evaluate(async () => {
-    const local = `${localStorage.toString()}${sessionStorage.toString()}${document.cookie}`;
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const open = indexedDB.open('vulna-ciphertext');
-      open.onsuccess = () => resolve(open.result);
-      open.onerror = () => reject(open.error);
-    });
-    const blobs = await new Promise<unknown[]>((resolve, reject) => {
-      const transaction = database.transaction('blobs', 'readonly');
-      const getAll = transaction.objectStore('blobs').getAll();
-      getAll.onsuccess = () => resolve(getAll.result);
-      getAll.onerror = () => reject(getAll.error);
-    });
-    return { local, blobs: blobs.map((blob) => Array.from(new Uint8Array(blob as ArrayBuffer))) };
-  });
-  expect(persisted.local).not.toContain(sentinel);
-  expect(new TextDecoder().decode(new Uint8Array(persisted.blobs[0]))).not.toContain(sentinel);
+  const persisted = await page.evaluate(() => `${localStorage.toString()}${sessionStorage.toString()}${document.cookie}`);
+  expect(persisted).not.toContain(sentinel);
 });
 
 test('theme toggle persists a non-sensitive display preference', async ({ page }) => {

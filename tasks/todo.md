@@ -60,6 +60,9 @@
   - [x] Expose the connected public address and wallet state in navigation and researcher flow.
   - [x] Keep report submission fail-closed until an open bounty and browser ZK bundle are available.
 - [ ] Browser transaction flow — let owner wallets open a bounty and researcher wallets submit proof-backed disclosures.
+  - [x] Researcher bounty picker — read configured Preview V2 bounty state without private-state setup, auto-load open bounties after wallet connection, and hide custom contract input under advanced configuration.
+    - Privacy boundary: public indexer reads use only wallet-provided Preview configuration and contract address; no report data, wallet signature, or encrypted witness state is created to list bounties.
+    - Contract invariants: read-only UI selection; submission still revalidates the selected bounty and requires indexed `OPEN` state.
   - [x] Freeze the V2 public bounty metadata: reviewer role commitment, reviewer encryption public key, and safe listing metadata.
   - [x] Update Compact ABI and redeploy a fresh Preview V2 contract because the current contract is `PAID`.
   - [x] Add an untrusted Vercel Blob relay for canonical encrypted report envelopes; browser encrypts before upload and reviewer verifies hashes before decrypting.
@@ -107,6 +110,7 @@
 - [x] Visual refresh: run build, web tests, light/dark responsive inspection, and privacy-output review.
 - [x] Wallet connection: run connector unit/browser coverage, build, privacy regression, and public-state review.
 - [ ] Browser transaction flow: run V2 contract simulator, ciphertext-relay tests, browser wallet mocks, indexer confirmation, and privacy-output review.
+  - [x] Researcher bounty picker: typecheck, browser wallet auto-load coverage, production build, and plaintext-output review.
 - [x] Preview V2 deployment: compile, typecheck, deploy-only indexer confirmation, live config check, and diff/privacy review.
 - [x] Reviewer enrollment and V2 bounty creation: crypto tests, typecheck, contract simulator, live operator transaction, frontend build, and privacy review.
   - [x] Live Preview operator transaction created and indexer-confirmed V2 bounty `#1` as `OPEN`.
@@ -143,6 +147,7 @@
 - Added encrypted account-scoped reviewer enrollment with a Curve25519 key pair and reviewer role secret, plus a public-only copy bundle. The operator bounty command accepts that strict public bundle and performs only `createBounty` then `openBounty` using the retained V2 owner state.
 - Made optional DApp Connector capability hints non-blocking and removed the unsupported status call from connection health checks. The connector now validates Preview using required configuration plus public address only.
 - Created and opened Preview V2 bounty `#1` using a reviewer-supplied public enrollment bundle; no reviewer private material entered operator state or source control.
+- Replaced the researcher contract-loader with an auto-loaded open-bounty picker; custom public contracts remain available only under advanced configuration.
 
 ### Verified
 
@@ -171,6 +176,8 @@
 - Wallet recovery: `pnpm run typecheck` and 6 Chromium browser checks passed, including a Preview wallet that rejects optional hints/status calls. Vercel production deployment `dpl_Bu7c6TuL8SGZMMmJaTBerwAk1WGM` is ready.
 - Wallet recovery follow-up: the connector no longer invokes `hintUsage` at all during connection. Typecheck and all 6 browser checks passed; Vercel production deployment `dpl_J2GioNVJjwB7bMYh7cV8uBhXDPKx` is ready.
 - V2 bounty creation: `pnpm run create:bounty:v2:preview` completed with Preview contract `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`, bounty `#1`, and indexer-confirmed `OPEN` state.
+- Researcher bounty picker: `pnpm run typecheck`, `pnpm run test:protocol` (29 tests), and `pnpm run test:web` (8 browser checks) passed. Browser coverage confirms automatic public reads do not call shielded-address or signature/private-state setup.
+- Researcher bounty picker deployment: Vercel production deployment `dpl_To2PBEeuHTgeKeDgr9eBierTsF3k` is ready and aliased to `https://vulna-midnight.vercel.app`.
 
 ### Risks
 

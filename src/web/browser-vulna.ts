@@ -28,6 +28,14 @@ export type IndexedBounty = Readonly<{
   status: Vulna.BountyStatus;
 }>;
 
+export function normalizeBountyStatus(value: unknown): Vulna.BountyStatus {
+  const status = Number(value);
+  if (!Number.isInteger(status) || status < Vulna.BountyStatus.DRAFT || status > Vulna.BountyStatus.CANCELLED) {
+    throw new BrowserTransactionError('The indexed bounty has an invalid status.');
+  }
+  return status as Vulna.BountyStatus;
+}
+
 type VulnaCircuits = keyof Vulna.ImpureCircuits<VulnaPrivateState> & string;
 type BrowserCall =
   | Readonly<{ circuitId: 'createBounty'; args: [Uint8Array, Uint8Array, bigint, Uint8Array, Uint8Array, Uint8Array, bigint] }>
@@ -129,7 +137,7 @@ export async function listIndexedBounties(api: ConnectedAPI, contractAddress: st
   for (let id: bigint = 1n; id <= count; id = id + 1n) {
     if (!ledger.bounties.member(id)) continue;
     const bounty = ledger.bounties.lookup(id);
-    bounties.push({ id, binding: new Uint8Array(bounty.binding), reviewerEncryptionPublicKey: new Uint8Array(bounty.reviewerEncryptionPublicKey), reviewerKeyVersion: bounty.reviewerKeyVersion as bigint, rewardAmount: bounty.rewardAmount as bigint, status: bounty.status });
+    bounties.push({ id, binding: new Uint8Array(bounty.binding), reviewerEncryptionPublicKey: new Uint8Array(bounty.reviewerEncryptionPublicKey), reviewerKeyVersion: bounty.reviewerKeyVersion as bigint, rewardAmount: bounty.rewardAmount as bigint, status: normalizeBountyStatus(bounty.status) });
   }
   return bounties;
 }

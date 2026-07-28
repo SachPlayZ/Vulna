@@ -148,6 +148,7 @@
 - Made optional DApp Connector capability hints non-blocking and removed the unsupported status call from connection health checks. The connector now validates Preview using required configuration plus public address only.
 - Created and opened Preview V2 bounty `#1` using a reviewer-supplied public enrollment bundle; no reviewer private material entered operator state or source control.
 - Replaced the researcher contract-loader with an auto-loaded open-bounty picker; custom public contracts remain available only under advanced configuration.
+- Allowed only the required Preview indexer HTTPS/WSS origins in CSP so the browser can retrieve public bounty state; normalized generated bounty statuses before UI comparison.
 
 ### Verified
 
@@ -178,6 +179,7 @@
 - V2 bounty creation: `pnpm run create:bounty:v2:preview` completed with Preview contract `02588eea120001e5589c04b8e3d60cba52330c21fb280af45f4e5c058e09b495`, bounty `#1`, and indexer-confirmed `OPEN` state.
 - Researcher bounty picker: `pnpm run typecheck`, `pnpm run test:protocol` (29 tests), and `pnpm run test:web` (8 browser checks) passed. Browser coverage confirms automatic public reads do not call shielded-address or signature/private-state setup.
 - Researcher bounty picker deployment: Vercel production deployment `dpl_To2PBEeuHTgeKeDgr9eBierTsF3k` is ready and aliased to `https://vulna-midnight.vercel.app`.
+- Bounty picker repair: direct Preview indexer read confirmed V2 bounty `#1` is `OPEN`; `pnpm run typecheck`, `pnpm run test:protocol` (30 tests), and `pnpm run test:web` (8 browser checks) passed. Vercel deployment `dpl_7xQhfxYeFdFHEeJ72vDz5to9t9HA` is live; a signature-free browser wallet mock displayed bounty `#1` from the real Preview indexer.
 
 ### Risks
 

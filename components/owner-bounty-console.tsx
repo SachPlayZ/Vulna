@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { BountyStatus } from '../contracts/managed/hello-world/contract/index.js';
 import { listIndexedBounties, type IndexedBounty } from '../src/web/browser-vulna';
 import { configuredVulnaV2ContractAddress } from '../src/web/vulna-v2-config';
 import { useWallet } from './wallet/wallet-provider';
@@ -28,5 +29,5 @@ export function OwnerBountyConsole() {
     }
   };
 
-  return <section className="composer-shell"><div className="privacy-banner"><span>PREVIEW V2</span><p>Configured operator contract: {configuredVulnaV2ContractAddress || 'pending deployment'}. The address is public; its owner witness state remains encrypted locally.</p></div><div className="composer-footer"><p role="status" aria-live="polite">{notice}</p><button className="button button-secondary" disabled={!isConnected || !configuredVulnaV2ContractAddress} type="button" onClick={() => void refresh()}>Refresh bounties</button></div><div className="bounty-list">{bounties.map((bounty) => <article className="bounty-row" key={String(bounty.id)}><div><p>V2 bounty #{String(bounty.id)}</p><h2>{bounty.status === 1 ? 'Open' : bounty.status === 0 ? 'Draft' : 'Lifecycle updated'}</h2><span>Reward policy: {String(bounty.rewardAmount)} · reviewer key v{String(bounty.reviewerKeyVersion)}</span></div></article>)}</div></section>;
+  return <section className="composer-shell"><div className="privacy-banner"><span>PREVIEW V2</span><p>Configured operator contract: {configuredVulnaV2ContractAddress || 'pending deployment'}. The address is public; its owner witness state remains encrypted locally.</p></div><div className="composer-footer"><p role="status" aria-live="polite">{notice}</p><button className="button button-secondary" disabled={!isConnected || !configuredVulnaV2ContractAddress} type="button" onClick={() => void refresh()}>Refresh bounties</button></div><div className="bounty-list">{bounties.map((bounty) => <article className="bounty-row" key={String(bounty.id)}><div><p>V2 bounty #{String(bounty.id)}</p><h2>{bounty.status === BountyStatus.OPEN ? 'Open' : bounty.status === BountyStatus.DRAFT ? 'Draft' : 'Lifecycle updated'}</h2><span>Reward policy: {String(bounty.rewardAmount)} · reviewer key v{String(bounty.reviewerKeyVersion)}</span></div></article>)}</div></section>;
 }

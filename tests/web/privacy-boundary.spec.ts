@@ -10,6 +10,7 @@ test('public routes send restrictive headers and never render a report sentinel'
   }
   const response = await request.get('/researcher');
   expect(response.headers()['content-security-policy']).toContain("default-src 'self'");
+  expect(response.headers()['content-security-policy']).toContain('https://indexer.preview.midnight.network wss://indexer.preview.midnight.network');
   expect(response.headers()['referrer-policy']).toBe('no-referrer');
   expect(response.headers()['x-content-type-options']).toBe('nosniff');
 

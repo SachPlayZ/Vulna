@@ -19,3 +19,13 @@
 
 - Mistake: Exposed a developer-facing contract lookup as the primary researcher flow.
 - Rule: Auto-load configured public contracts and show actionable bounty cards; keep raw address entry behind an advanced/debug affordance.
+
+## Pattern
+
+- Mistake: Assumed an indexer-delivered Compact enum always arrived as a JavaScript number.
+- Rule: Normalize public generated values at the read boundary before UI comparisons; use generated enum constants, never magic status numbers.
+
+## Pattern
+
+- Mistake: Tightened CSP without allowlisting the required Preview indexer transports.
+- Rule: When browser code reads Midnight public state, allowlist only its exact indexer HTTPS and WSS origins, then assert them in browser security tests.

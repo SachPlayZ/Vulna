@@ -93,7 +93,7 @@
 
 - [x] Git deployment reliability — generate Compact assets during the production build so a clean Vercel Git checkout does not depend on ignored local files.
   - Privacy boundary: build-only generation; no wallet state, report data, or secrets enter the artifact.
-  - [ ] Version generated contract bindings required by the web build, retain explicit local contract generation checks, add a reusable pre-push verification command, and exercise the build from a fresh clone.
+  - [x] Version generated contract bindings required by the web build, retain explicit local contract generation checks, add a reusable pre-push verification command, and exercise the build from a fresh clone.
 
 ## Verification
 
@@ -185,7 +185,8 @@
 - Researcher bounty picker: `pnpm run typecheck`, `pnpm run test:protocol` (29 tests), and `pnpm run test:web` (8 browser checks) passed. Browser coverage confirms automatic public reads do not call shielded-address or signature/private-state setup.
 - Researcher bounty picker deployment: Vercel production deployment `dpl_To2PBEeuHTgeKeDgr9eBierTsF3k` is ready and aliased to `https://vulna-midnight.vercel.app`.
 - Bounty picker repair: direct Preview indexer read confirmed V2 bounty `#1` is `OPEN`; `pnpm run typecheck`, `pnpm run test:protocol` (30 tests), and `pnpm run test:web` (8 browser checks) passed. Vercel deployment `dpl_7xQhfxYeFdFHEeJ72vDz5to9t9HA` is live; a signature-free browser wallet mock displayed bounty `#1` from the real Preview indexer.
-- Git deployment reliability: `pnpm run check:push` passed both locally and from a fresh clone, including generated Compact assets, typecheck, 30 protocol/privacy tests, and the production build. CI now compiles before testing/building.
+- Git deployment reliability: `pnpm run check:push` passed both locally and from a fresh clone, including generated Compact assets, typecheck, 30 protocol/privacy tests, and the production build. CI now runs the compiler-free clean-checkout production build.
+- Git deployment fix: a compiler-free fresh clone passed `pnpm run check:push` after adding the generated contract JS/types required by Next.js and retaining the already-versioned public ZK assets. `pnpm run check:contract` verifies compiler output locally.
 
 ### Risks
 
